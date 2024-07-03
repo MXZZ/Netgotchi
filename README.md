@@ -9,7 +9,7 @@ A small arduino .ino script with some great functions to detect intruders or bre
 - Usb cable 
 - optional 3d printed parts ( from thingiverse.com)
 
-  or get an assembled one here on the (official shop *Ollestore* on Etsy)[ollestore.etsy.com] 
+  or get an assembled one here on the [official shop *Ollestore* on Etsy](ollestore.etsy.com) 
 
 # How to use
 1. open .ino file , choose your subnet ( just change the value or add your own)
