@@ -3,6 +3,9 @@ reversed pwnagotchi : Netgotchi lives to protect your network
 
 A small arduino .ino script with some great functions to detect intruders or breach in the network, it pings periodically the network and report if any new device. It also has a rudimental "Honeypot" functionality with a rudimental exposed service, once someone reach the honeypot it will trigger an alarm. Please contribute to the repository via pull requests!
 
+![il_1588xN 6101306530_cn6d](https://github.com/MXZZ/Netgotchi/assets/3322271/5b098ac4-e024-42a9-ae83-8f6892d19dfb)
+
+
 # Requirements 
 - ESP8266 ( any )
 - SSD1306 display ( ic version ) 
