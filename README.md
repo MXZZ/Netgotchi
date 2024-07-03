@@ -42,3 +42,8 @@ Current supported subnets :
 
    Join our [reddit/r/Netgotchi](https://www.reddit.com/r/Netgotchi/)
 
+ # License
+ GNU General Public License v3.0 
+ Created by MG ( MXZZ ) 
+
+
