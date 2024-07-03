@@ -348,7 +348,7 @@ void displayIPS() {
 
 void pingNetwork(int i) {
   status = "Scanning";
-  IPAddress ip(192,168,0,1);
+  IPAddress ip(192,168,0,i);
   if (subnet == 0) IPAddress ip(192, 168, 0, i);  // Change to your network's IP range
   if (subnet == 1) IPAddress ip(192, 168, 1, i);
   if (subnet == 2) IPAddress ip(192, 168, 88, i);
