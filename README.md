@@ -3,7 +3,7 @@ reversed pwnagotchi : Netgotchi lives to protect your network
 
 A small arduino .ino script with some great functions to detect intruders or breach in the network, it pings periodically the network and report if any new device. It also has a rudimental "Honeypot" functionality with a rudimental exposed service, once someone reach the honeypot it will trigger an alarm. Please contribute to the repository via pull requests!
 
-*Tested with nmap, any service / intense scan will trigger the alert.* 
+*Tested with nmap, service scan / intense scan will trigger the alert.* 
 
 ![il_1588xN 6101306530_cn6d](https://github.com/MXZZ/Netgotchi/assets/3322271/5b098ac4-e024-42a9-ae83-8f6892d19dfb)
 
@@ -25,8 +25,7 @@ A small arduino .ino script with some great functions to detect intruders or bre
 # How to use
 1. open .ino file , choose your subnet ( just change the value or add your own)
 
-Current supported subnets :
-- Type of Subnet supported
+Current supported subnets ( or add your own) :
 - 192.168.0.0/24 = type 0
 - 192.168.1.0/24 = type 1
 - 192.168.88.0/24 = type 2
