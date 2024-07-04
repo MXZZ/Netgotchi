@@ -1,3 +1,7 @@
+// Netgotchi - lives to protect your network!
+// Created by MXZZ https://github.com/MXZZ 
+// GNU General Public License v3.0
+
 #include <ESP8266WiFi.h>
 #include <ESPping.h>
 #include <Wire.h>
