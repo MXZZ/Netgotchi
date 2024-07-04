@@ -5,6 +5,8 @@ A small arduino .ino script with some great functions to detect intruders or bre
 
 *Tested with nmap, service scan / intense scan will trigger the alert.* 
 
+Get an official build from [official shop *Ollestore* on Etsy](https://ollestore.etsy.com/listing/1742406142) and support the development! 
+
 ![il_1588xN 6101306530_cn6d](https://github.com/MXZZ/Netgotchi/assets/3322271/5b098ac4-e024-42a9-ae83-8f6892d19dfb)
 
 
