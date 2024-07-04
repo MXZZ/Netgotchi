@@ -39,7 +39,7 @@ Current supported subnets ( or add your own) :
 
 4. Netgotchi now lives in your network, it will scan periodically using pings and report potential breach of the honeypot
    Enjoy your Netgotchi !
-   Please contribuite to the project , let's save our network!
+   Please contribute to the project , let's save our network!
 
    Join our [reddit/r/Netgotchi](https://www.reddit.com/r/Netgotchi/)
 
