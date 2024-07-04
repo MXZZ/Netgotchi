@@ -41,7 +41,6 @@ int ipnum = 0;   // display counter
 int iprows = 0;  // ip rows
 int currentScreen = 0;
 int max_ip = 255;
-String ipprefix = "192.168.0.";
 bool startScan = false;
 const long intervalScan = 60000 * 4;
 const long intervalPing = 60000 * 5;
@@ -79,34 +78,53 @@ int animation = 0;
 int subnet = 0;
 
 
+//Use wifi manager  or use the SSID/PASSWORD credential below
+bool useWifiManager = true;
+//ssid and password are used only when useWifiManager == false
+const char* ssid = "";
+const char* password = "";
+
+
 void setup() {
   Serial.begin(115200);
 
   WiFiManager wifiManager;
-  if (wifiManager.autoConnect("AutoConnectAP")) {
-    display.println("Connection Successful");
-  } else {
-    display.println("Select Wifi AutoConnectAP");
-    display.println("to run Wifi Setup");
-  }
-
- 
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;)
       ;
   }
-  display.clearDisplay();
-  display.display();
-   //WiFi.begin(ssid, password);
+
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.print("Connecting to WiFi");
+
+  if (useWifiManager) {
+    if (wifiManager.autoConnect("AutoConnectAP")) {
+      display.println("Connection Successful");
+      display.display();
+
+    } else {
+      display.println("Select Wifi AutoConnectAP");
+      display.println("to run Wifi Setup");
+      display.display();
+    }
+  } else {
+    WiFi.begin(ssid, password);
+  }
+
+  //WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    display.print(".");
+    display.display();
   }
 
   Serial.println(WiFi.localIP());
-  
+
 
   timeClient.begin();
   initStars();
@@ -251,7 +269,7 @@ void displayTimeAndDate() {
   timeClient.update();
   String formattedTime = timeClient.getFormattedTime();
   time_t epochTime = timeClient.getEpochTime();
-  struct tm *ptm = gmtime((time_t *)&epochTime);
+  struct tm* ptm = gmtime((time_t*)&epochTime);
 
   int currentDay = ptm->tm_mday;
   int currentMonth = ptm->tm_mon + 1;
@@ -348,7 +366,7 @@ void displayIPS() {
 
 void pingNetwork(int i) {
   status = "Scanning";
-  IPAddress ip(192,168,0,i);
+  IPAddress ip(192, 168, 0, i);
   if (subnet == 0) IPAddress ip(192, 168, 0, i);  // Change to your network's IP range
   if (subnet == 1) IPAddress ip(192, 168, 1, i);
   if (subnet == 2) IPAddress ip(192, 168, 88, i);
