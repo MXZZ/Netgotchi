@@ -336,6 +336,18 @@ void displayIPS() {
   display.setCursor(0, 0);
   display.println("Found Hosts:" + String(ipnum));
 
+  //Ipprefix is based on the subnet type
+  String ipprefix="";
+
+  //192.168.0.0/24 = type 0
+  //192.168.1.0/24 = type 1
+  //192.168.88.0/24 = type 2
+  //192.168.100.0/24  = type 3
+  if(subnet==0) ipprefix="192.168.0.";
+  if(subnet==1) ipprefix="192.168.1.";
+  if(subnet==2) ipprefix="192.168.88.";
+  if(subnet==3) ipprefix="192.168.100.";
+
 
 
   for (int j = 0; j < max_ip; j++) {
