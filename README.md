@@ -21,7 +21,11 @@ Get an official build from [official shop *Ollestore* on Etsy](https://ollestore
 - Usb cable 
 - optional 3d printed parts ( from thingiverse.com)
 
-  or get an assembled one here on the [official shop *Ollestore* on Etsy](https://ollestore.etsy.com/listing/1742406142) 
+  or get an assembled one here on the [official shop *Ollestore* on Etsy](https://ollestore.etsy.com/listing/1742406142)
+
+# Diagram 
+![diagram_netgotchi](https://github.com/MXZZ/Netgotchi/assets/3322271/54fb9be5-4fe4-4ff3-b24a-f2a05287d893)
+
 
 # Libraries
 - It uses a modified version of ESP8266FtpServer ( replace your local one in Arduino>Libraries with this one)
