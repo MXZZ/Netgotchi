@@ -1,5 +1,5 @@
 // Netgotchi - lives to protect your network!
-// Created by MXZZ https://github.com/MXZZ 
+// Created by MXZZ https://github.com/MXZZ
 // GNU General Public License v3.0
 
 #include <ESP8266WiFi.h>
@@ -67,9 +67,19 @@ String pwnagotchiFaceBlink = "( .__.)";
 String pwnagotchiFaceSleep = "(-__- )";
 String pwnagotchiFaceSurprised = "(o__o)";
 String pwnagotchiFaceHappy = "(^=^)";
+String pwnagotchiFaceSad = "(T_T)";
+String pwnagotchiFaceSad2 = "(T__T)";
+String pwnagotchiFaceSuspicious = "(>_>)";
+String pwnagotchiFaceSuspicious2 = "(<_<)";
+String pwnagotchiFaceHit = "(x_x)";
+String pwnagotchiFaceHit2 = "(X__X)";
+String pwnagotchiFaceStarryEyed = "(*_*)";
 String pwnagotchiScreenMessage = "Saving planets!";
 int animState = 0;
 int animation = 0;
+long old_seconds = 0;
+int moveX = 0;
+String currentIP = "";
 
 
 //**
@@ -126,13 +136,10 @@ void setup() {
     display.print(".");
     display.display();
   }
-
-  Serial.println(WiFi.localIP());
-
-
+  currentIP = WiFi.localIP().toString().c_str();
+  Serial.println(currentIP);
   timeClient.begin();
   initStars();
-
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
 }
 
@@ -211,16 +218,12 @@ void NetworkStats() {
   }
   display.println("Network Speed: " + stats);
   display.println("Internet: " + externalNetworkStatus);
-
-  //display.println("Latency: "+ String(avg_time_ms)+"ms");
   display.display();
   delay(5000);
-  // previousMillis=millis(); // reset screen
 }
 
 void ftpHoneypotScan() {
-  ftpSrv.handleFTP();  // Handle FTP server
-
+  ftpSrv.handleFTP();
   // Check for FTP connections
   if (ftpSrv.returnHoneypotStatus()) {
     honeypotTriggered = true;
@@ -281,13 +284,13 @@ void displayTimeAndDate() {
 
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  display.setCursor(0, 0);
+  display.setCursor(5, 0);
   display.print(formattedTime);
   display.setCursor(0, 8);
   display.printf("%02d/%02d/%d", currentDay, currentMonth, currentYear);
   display.setCursor(0, 55);
   display.print("Host found:" + String(ipnum));
-  display.setCursor(80, 0);
+  display.setCursor(75, 0);
   display.print("Honeypot");
   if (honeypotTriggered) {
     if (((seconds % 2) == 0)) {
@@ -335,39 +338,37 @@ void displayIPS() {
   display.clearDisplay();
   display.setCursor(0, 0);
   display.println("Found Hosts:" + String(ipnum));
+  display.println("This:"+ currentIP);
 
   //Ipprefix is based on the subnet type
-  String ipprefix="";
+  String ipprefix = "";
 
   //192.168.0.0/24 = type 0
   //192.168.1.0/24 = type 1
   //192.168.88.0/24 = type 2
   //192.168.100.0/24  = type 3
-  if(subnet==0) ipprefix="192.168.0.";
-  if(subnet==1) ipprefix="192.168.1.";
-  if(subnet==2) ipprefix="192.168.88.";
-  if(subnet==3) ipprefix="192.168.100.";
 
-
+  if (subnet == 0) ipprefix = "192.168.0.";
+  if (subnet == 1) ipprefix = "192.168.1.";
+  if (subnet == 2) ipprefix = "192.168.88.";
+  if (subnet == 3) ipprefix = "192.168.100.";
 
   for (int j = 0; j < max_ip; j++) {
 
     if (ips[j] == 1 || ips[j] == -1) {
       if (iprows >= 4) {
         display.clearDisplay();
-        display.setCursor(0, 5);
-        display.print("Hosts:" + String(ipnum));
+        display.setCursor(5, 0);
+        display.println("Hosts:" + String(ipnum));
+
         iprows = 0;
       }
-
       display.setCursor(0, 20 + (iprows)*10);
-
       if (ips[j] == 1) {
         String al = ipprefix + String(j) + " alive";
         display.println(al);
         iprows++;
       }
-
       if (ips[j] == -1) {
         String dc = ipprefix + String(j) + " disconnected";
         display.println(dc);
@@ -387,9 +388,6 @@ void pingNetwork(int i) {
   if (subnet == 1) IPAddress ip(192, 168, 1, i);
   if (subnet == 2) IPAddress ip(192, 168, 88, i);
   if (subnet == 3) IPAddress ip(192, 168, 100, i);
-
-
-
   if (Ping.ping(ip, 1)) {
     iprows++;
     ipnum++;
@@ -403,12 +401,9 @@ void pingNetwork(int i) {
   }
 }
 
-
-
-long old_seconds = 0;
-int moveX = 0;
 void pwnagotchi_face() {
   display.clearDisplay();
+  updateAndDrawStars(); // Draw the star effect
   displayTimeAndDate();
   display.setTextSize(2);
   drawPwnagotchiFace(animState);
@@ -420,7 +415,7 @@ void pwnagotchi_face() {
 
     old_seconds = seconds;
     animState++;
-    if (animState > 6) animState = 0;
+    if (animState > 5) animState = 0;
   }
   display.display();
   display.setTextSize(1);
@@ -428,27 +423,46 @@ void pwnagotchi_face() {
 
 void drawPwnagotchiFace(int state) {
   display.setCursor(30 + moveX, 30);
-  if (state == 0) {
-    display.println((pwnagotchiFace));
-  }
-  if (state == 1) {
-    display.println((pwnagotchiFace2));
-  }
 
-  if (state == 2) {
-    display.println((pwnagotchiFaceBlink));
-  }
+  if (honeypotTriggered == false) {
+    if (state == 0) {
+      display.println((pwnagotchiFace));
+    }
+    if (state == 1) {
+      display.println((pwnagotchiFace2));
+    }
 
-  if (state == 3) {
-    display.println((pwnagotchiFaceBlink));
-  }
-  if (state == 4) {
-    display.println((pwnagotchiFaceSleep));
-  }
-  if (state == 5) {
-    display.println((pwnagotchiFaceSurprised));
-  }
-  if (state == 6) {
-    display.println((pwnagotchiFaceHappy));
+    if (state == 2) {
+      display.println((pwnagotchiFaceBlink));
+    }
+
+    if (state == 3) {
+      display.println((pwnagotchiFaceSleep));
+    }
+    if (state == 4) {
+      display.println((pwnagotchiFaceSurprised));
+    }
+    if (state == 5) {
+      display.println((pwnagotchiFaceHappy));
+    }
+  } else {
+    if (state == 0) {
+      display.println((pwnagotchiFaceSad));
+    }
+    if (state == 1) {
+      display.println((pwnagotchiFaceSad2));
+    }
+    if (state == 2 ) {
+      display.println((pwnagotchiFaceSuspicious));
+    }
+    if (state == 3 ) {
+      display.println((pwnagotchiFaceSuspicious2));
+    }
+    if (state == 4 ) {
+      display.println((pwnagotchiFaceHit));
+    }
+    if (state == 5 ) {
+      display.println((pwnagotchiFaceHit2));
+    }
   }
 }
