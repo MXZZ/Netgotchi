@@ -46,6 +46,8 @@ Get an official build from [official shop *Ollestore* on Etsy](https://ollestore
    Enjoy your Netgotchi !
    Please contribute to the project , let's save our network!
 
+   Thank you to all contributors and supporters! (^///^)9 
+
    Join our [reddit/r/Netgotchi](https://www.reddit.com/r/Netgotchi/)
 
  # License
