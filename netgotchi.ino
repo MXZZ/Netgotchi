@@ -177,7 +177,7 @@ void loop() {
   }
 
   if (startScan) {
-    if (i < 255) {
+    if (i < 256) {
       pingNetwork(i);
       i++;
     } else {
