@@ -12,15 +12,20 @@
 #include <WiFiManager.h>  // Include the WiFiManager library
 #include <ESP8266FtpServer.h>
 #include <ESP8266mDNS.h>
+#include <Preferences.h>  // Include Preferences library
 
-FtpServer ftpSrv;  // Create an instance of the FTP server
+
+
 
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
+const float VERSION = 0.6;
+
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+FtpServer ftpSrv;  // Create an instance of the FTP server
 
 
 const int NUM_STARS = 100;
@@ -60,7 +65,7 @@ bool honeypotTriggered = false;
 String externalNetworkStatus = "";
 String networkStatus = "";
 bool scanOnce = true;
-String stats = "not avaiable";
+String stats = "Not available";
 String pwnagotchiFace = "(-v_v)";
 String pwnagotchiFace2 = "(v_v-)";
 String pwnagotchiFaceBlink = "( .__.)";
@@ -81,6 +86,7 @@ long old_seconds = 0;
 int moveX = 0;
 String currentIP = "";
 
+const int flashButtonPin = 0;  // GPIO0 is connected to the flash button
 
 //**
 //Type of Subnet supported
@@ -90,6 +96,7 @@ String currentIP = "";
 //192.168.100.0/24  = type 3
 // or add your own subnet in the pingNetwork Function
 int subnet = 0;
+WiFiManager wifiManager;
 
 
 //Use wifi manager  or use the SSID/PASSWORD credential below
@@ -98,32 +105,68 @@ bool useWifiManager = true;
 const char* ssid = "";
 const char* password = "";
 
+// Preferences object
+Preferences preferences;
+bool shouldSaveConfig = false;
+bool autoDetectNetwork = true;
+
 
 void setup() {
   Serial.begin(115200);
 
-  WiFiManager wifiManager;
+  // Initialize EEPROM
+  preferences.begin("config", false);
 
+  Serial.println(subnet);
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;)
       ;
   }
-
+  display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.print("Connecting to WiFi");
+  display.println("Netgotchi v." + String(VERSION));
+  display.println("created by MXZZ ");
+  delay(1000);
 
   if (useWifiManager) {
+    display.println("TO Configure WIFI");
+    display.println("USE: AutoConnectAP");
+  } else display.println("Connecting to WiFi");
+
+  display.display();
+
+  if (useWifiManager) {
+
+    //initialize to the hardcoded value as default or use the one saved in memory
+    subnet = preferences.getInt("subnet", subnet);
+    // Set callback that gets called when WiFiManager needs to save config
+    wifiManager.setSaveConfigCallback(saveConfigCallback);
+    int subnet_param = 0;
+    // Convert network_type to string for WiFiManager
+    char network_type_str[16] = { '0' };
+
+    // Add custom parameter for network type
+    WiFiManagerParameter custom_network_type("subnet_param", "Network Type", network_type_str, 1, 0);
+    wifiManager.addParameter(&custom_network_type);
+
     if (wifiManager.autoConnect("AutoConnectAP")) {
       display.println("Connection Successful");
       display.display();
 
-    } else {
-      display.println("Select Wifi AutoConnectAP");
-      display.println("to run Wifi Setup");
-      display.display();
+      // Read updated parameters
+      if (custom_network_type.getValue() > 0) {
+        subnet = atoi(custom_network_type.getValue());
+      } else subnet = 0;
+
+      if(shouldSaveConfig){
+        Serial.println("subnet:" + String(subnet));
+        preferences.putInt("subnet", subnet);
+        preferences.end();
+        Serial.println("Saved config");
+      }
     }
   } else {
     WiFi.begin(ssid, password);
@@ -141,6 +184,11 @@ void setup() {
   timeClient.begin();
   initStars();
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
+
+
+
+  // Initialize the flash button pin as input
+  pinMode(flashButtonPin, INPUT_PULLUP);
 }
 
 void loop() {
@@ -189,6 +237,8 @@ void loop() {
   if (animation > 1) animation = 0;
 
   delay(5);
+
+  buttonLoops();
 }
 
 void NetworkStats() {
@@ -338,7 +388,7 @@ void displayIPS() {
   display.clearDisplay();
   display.setCursor(0, 0);
   display.println("Found Hosts:" + String(ipnum));
-  display.println("This:"+ currentIP);
+  display.println("This:" + currentIP);
 
   //Ipprefix is based on the subnet type
   String ipprefix = "";
@@ -383,11 +433,12 @@ void displayIPS() {
 
 void pingNetwork(int i) {
   status = "Scanning";
-  IPAddress ip(192, 168, 0, i);
-  if (subnet == 0) IPAddress ip(192, 168, 0, i);  // Change to your network's IP range
-  if (subnet == 1) IPAddress ip(192, 168, 1, i);
-  if (subnet == 2) IPAddress ip(192, 168, 88, i);
-  if (subnet == 3) IPAddress ip(192, 168, 100, i);
+  IPAddress ip;
+  if (subnet == 0) ip = IPAddress(192, 168, 0, i);
+  if (subnet == 1) ip = IPAddress(192, 168, 1, i);
+  if (subnet == 2) ip = IPAddress(192, 168, 88, i);
+  if (subnet == 3) ip = IPAddress(192, 168, 100, i);
+  Serial.println(ip.toString().c_str());
   if (Ping.ping(ip, 1)) {
     iprows++;
     ipnum++;
@@ -403,7 +454,7 @@ void pingNetwork(int i) {
 
 void pwnagotchi_face() {
   display.clearDisplay();
-  updateAndDrawStars(); // Draw the star effect
+  updateAndDrawStars();  // Draw the star effect
   displayTimeAndDate();
   display.setTextSize(2);
   drawPwnagotchiFace(animState);
@@ -452,17 +503,50 @@ void drawPwnagotchiFace(int state) {
     if (state == 1) {
       display.println((pwnagotchiFaceSad2));
     }
-    if (state == 2 ) {
+    if (state == 2) {
       display.println((pwnagotchiFaceSuspicious));
     }
-    if (state == 3 ) {
+    if (state == 3) {
       display.println((pwnagotchiFaceSuspicious2));
     }
-    if (state == 4 ) {
+    if (state == 4) {
       display.println((pwnagotchiFaceHit));
     }
-    if (state == 5 ) {
+    if (state == 5) {
       display.println((pwnagotchiFaceHit2));
     }
   }
+}
+
+
+void buttonLoops() {
+  // Check if the flash button is pressed
+  if (digitalRead(flashButtonPin) == LOW) {
+    // Debounce delay
+    delay(50);
+    if (digitalRead(flashButtonPin) == LOW) {
+      // Button is still pressed, proceed to erase EEPROM and WiFiManager settings
+      display.clearDisplay();
+      display.println("Flash button pressed. WiFiManager settings...");
+      // Erase WiFiManager settings
+      wifiManager.resetSettings();
+
+      preferences.clear();
+      preferences.end();
+
+
+      display.println("EEPROM and WiFiManager settings erased.");
+      display.println("Restart this device");
+
+      // Optional: Add a delay to prevent multiple erases in quick succession
+      delay(10000);
+      ESP.restart();
+    }
+  }
+}
+
+// Callback notifying us of the need to save config
+void saveConfigCallback() {
+  shouldSaveConfig=true;
+  Serial.println("Should save config");
 }
