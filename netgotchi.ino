@@ -13,14 +13,16 @@
 #include <ESP8266FtpServer.h>
 #include <ESP8266mDNS.h>
 
-FtpServer ftpSrv;  // Create an instance of the FTP server
 
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
+const float VERSION = 0.7;
+
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+FtpServer ftpSrv;  // Create an instance of the FTP server
 
 
 const int NUM_STARS = 100;
@@ -60,7 +62,7 @@ bool honeypotTriggered = false;
 String externalNetworkStatus = "";
 String networkStatus = "";
 bool scanOnce = true;
-String stats = "not avaiable";
+String stats = "Not available";
 String pwnagotchiFace = "(-v_v)";
 String pwnagotchiFace2 = "(v_v-)";
 String pwnagotchiFaceBlink = "( .__.)";
@@ -79,17 +81,11 @@ int animState = 0;
 int animation = 0;
 long old_seconds = 0;
 int moveX = 0;
-String currentIP = "";
+IPAddress currentIP;
 
+const int flashButtonPin = 0;  // GPIO0 is connected to the flash button
 
-//**
-//Type of Subnet supported
-//192.168.0.0/24 = type 0
-//192.168.1.0/24 = type 1
-//192.168.88.0/24 = type 2
-//192.168.100.0/24  = type 3
-// or add your own subnet in the pingNetwork Function
-int subnet = 0;
+WiFiManager wifiManager;
 
 
 //Use wifi manager  or use the SSID/PASSWORD credential below
@@ -98,31 +94,38 @@ bool useWifiManager = true;
 const char* ssid = "";
 const char* password = "";
 
+bool shouldSaveConfig = false;
+bool useButtonToResetFlash = true;
+
 
 void setup() {
   Serial.begin(115200);
-
-  WiFiManager wifiManager;
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;)
       ;
   }
-
+  display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.print("Connecting to WiFi");
+  display.println("Netgotchi v." + String(VERSION));
+  display.println("created by MXZZ ");
+  delay(1000);
 
   if (useWifiManager) {
+    display.println("TO Configure WIFI");
+    display.println("USE: AutoConnectAP");
+  } else display.println("Connecting to WiFi");
+
+  display.display();
+
+  if (useWifiManager) {
+
+    
     if (wifiManager.autoConnect("AutoConnectAP")) {
       display.println("Connection Successful");
-      display.display();
-
-    } else {
-      display.println("Select Wifi AutoConnectAP");
-      display.println("to run Wifi Setup");
       display.display();
     }
   } else {
@@ -136,11 +139,14 @@ void setup() {
     display.print(".");
     display.display();
   }
-  currentIP = WiFi.localIP().toString().c_str();
-  Serial.println(currentIP);
+  currentIP = WiFi.localIP();
+  Serial.println(currentIP.toString().c_str());
   timeClient.begin();
   initStars();
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
+
+  // Initialize the flash button pin as input
+  if(useButtonToResetFlash)pinMode(flashButtonPin, INPUT_PULLUP);
 }
 
 void loop() {
@@ -170,7 +176,6 @@ void loop() {
     scanOnce = true;
   }
 
-
   if (startScan) {
     if (i < 255) {
       pingNetwork(i);
@@ -181,12 +186,13 @@ void loop() {
     }
   }
 
-
   ftpHoneypotScan();
 
   if (animation == 0) drawSpace();
   if (animation == 1) pwnagotchi_face();
   if (animation > 1) animation = 0;
+
+  if(useButtonToResetFlash)buttonLoops();
 
   delay(5);
 }
@@ -338,20 +344,10 @@ void displayIPS() {
   display.clearDisplay();
   display.setCursor(0, 0);
   display.println("Found Hosts:" + String(ipnum));
-  display.println("This:"+ currentIP);
 
-  //Ipprefix is based on the subnet type
-  String ipprefix = "";
-
-  //192.168.0.0/24 = type 0
-  //192.168.1.0/24 = type 1
-  //192.168.88.0/24 = type 2
-  //192.168.100.0/24  = type 3
-
-  if (subnet == 0) ipprefix = "192.168.0.";
-  if (subnet == 1) ipprefix = "192.168.1.";
-  if (subnet == 2) ipprefix = "192.168.88.";
-  if (subnet == 3) ipprefix = "192.168.100.";
+  //Ipprefix is based on the current assigned IP type
+  //change this to hardcode your subnet
+  String ipprefix = String(currentIP[0]) +"."+String(currentIP[1])+"."+String(currentIP[0])+".";
 
   for (int j = 0; j < max_ip; j++) {
 
@@ -383,11 +379,11 @@ void displayIPS() {
 
 void pingNetwork(int i) {
   status = "Scanning";
-  IPAddress ip(192, 168, 0, i);
-  if (subnet == 0) IPAddress ip(192, 168, 0, i);  // Change to your network's IP range
-  if (subnet == 1) IPAddress ip(192, 168, 1, i);
-  if (subnet == 2) IPAddress ip(192, 168, 88, i);
-  if (subnet == 3) IPAddress ip(192, 168, 100, i);
+
+  //change this to hardcode your subnet
+  IPAddress ip = IPAddress(currentIP[0], currentIP[1], currentIP[2], i );
+
+  Serial.println(ip.toString().c_str());
   if (Ping.ping(ip, 1)) {
     iprows++;
     ipnum++;
@@ -403,7 +399,7 @@ void pingNetwork(int i) {
 
 void pwnagotchi_face() {
   display.clearDisplay();
-  updateAndDrawStars(); // Draw the star effect
+  updateAndDrawStars();  // Draw the star effect
   displayTimeAndDate();
   display.setTextSize(2);
   drawPwnagotchiFace(animState);
@@ -452,17 +448,42 @@ void drawPwnagotchiFace(int state) {
     if (state == 1) {
       display.println((pwnagotchiFaceSad2));
     }
-    if (state == 2 ) {
+    if (state == 2) {
       display.println((pwnagotchiFaceSuspicious));
     }
-    if (state == 3 ) {
+    if (state == 3) {
       display.println((pwnagotchiFaceSuspicious2));
     }
-    if (state == 4 ) {
+    if (state == 4) {
       display.println((pwnagotchiFaceHit));
     }
-    if (state == 5 ) {
+    if (state == 5) {
       display.println((pwnagotchiFaceHit2));
     }
   }
 }
+
+
+void buttonLoops() {
+  // Check if the flash button is pressed
+  if (digitalRead(flashButtonPin) == LOW) {
+    // Debounce delay
+    delay(50);
+    if (digitalRead(flashButtonPin) == LOW) {
+      // Button is still pressed, proceed to erase EEPROM and WiFiManager settings
+      display.clearDisplay();
+      display.println("Flash button pressed. WiFiManager settings...");
+      // Erase WiFiManager settings
+      wifiManager.resetSettings();
+
+      display.println("EEPROM and WiFiManager settings erased.");
+      display.println("Restart this device");
+
+      // Optional: Add a delay to prevent multiple erases in quick succession
+      delay(10000);
+      ESP.restart();
+    }
+  }
+}
+
+
