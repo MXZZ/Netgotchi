@@ -34,14 +34,9 @@ Get an official build from [official shop *Ollestore* on Etsy](https://ollestore
 - WiFiManager standard ( install from Library manager)
 
 # How to use
-1. open .ino file , choose your subnet ( just change the value or add your own)
+1. ~~open .ino file , choose your subnet ( just change the value or add your own)~~ Not necessary due to Autodetect subnet function after v.0.7
 2. optionally you can input your Wifi credential in the .ino file or use the WifiManager library ( default is WifiManager) 
 
-Current supported subnets ( or add your own) :
-- 192.168.0.0/24 = type 0
-- 192.168.1.0/24 = type 1
-- 192.168.88.0/24 = type 2
-- 192.168.100.0/24  = type 3
 
 3. Install libraries and flash the file in the esp8266 ( connect the display first)
 4. On first status WiFiManager library will create an hostpot where you can set your wifi credentials
