@@ -347,7 +347,7 @@ void displayIPS() {
 
   //Ipprefix is based on the current assigned IP type
   //change this to hardcode your subnet
-  String ipprefix = String(currentIP[0]) +"."+String(currentIP[1])+"."+String(currentIP[0])+".";
+  String ipprefix = String(currentIP[0]) +"."+String(currentIP[1])+"."+String(currentIP[2])+".";
 
   for (int j = 0; j < max_ip; j++) {
 
