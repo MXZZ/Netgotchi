@@ -43,10 +43,18 @@ Get an official build from [official shop *Ollestore* on Etsy](https://ollestore
    "AutoConnectAP"
 
 5. Netgotchi now lives in your network, it will scan periodically using pings and report potential breach of the honeypot
-   Enjoy your Netgotchi !
-   Please contribute to the project , let's save our network!
+  
 
-   Thank you to all contributors and supporters! (^///^)9 
+
+# Headless mode ( for Cyberdecks )
+   ![immagine](https://github.com/MXZZ/Netgotchi/assets/3322271/f12ba979-5936-4bee-9d36-eba67ddebf59)
+  - open script pyserial_cyberdeck and change line 5: /dev/ttyUSB0 to your COM port  ( on linux is usually /dev/ttyUSB0 ) 
+  - run script utils/cyberdeck/pyserial_cyberdeck.py
+
+# Suppor the project
+ Enjoy your Netgotchi !
+   Please contribute to the project,and let's save our network!
+  Thank you to all contributors and supporters! (^///^)9 
 
    Join our [reddit/r/Netgotchi](https://www.reddit.com/r/Netgotchi/)
 
