@@ -63,23 +63,25 @@ String externalNetworkStatus = "";
 String networkStatus = "";
 bool scanOnce = true;
 String stats = "Not available";
-String pwnagotchiFace = "(-v_v)";
-String pwnagotchiFace2 = "(v_v-)";
-String pwnagotchiFaceBlink = "( .__.)";
-String pwnagotchiFaceSleep = "(-__- )";
-String pwnagotchiFaceSurprised = "(o__o)";
-String pwnagotchiFaceHappy = "(^=^)";
-String pwnagotchiFaceSad = "(T_T)";
-String pwnagotchiFaceSad2 = "(T__T)";
-String pwnagotchiFaceSuspicious = "(>_>)";
-String pwnagotchiFaceSuspicious2 = "(<_<)";
-String pwnagotchiFaceHit = "(x_x)";
-String pwnagotchiFaceHit2 = "(X__X)";
-String pwnagotchiFaceStarryEyed = "(*_*)";
-String pwnagotchiScreenMessage = "Saving planets!";
+String netgotchiFace = "(-v_v)";
+String netgotchiFace2 = "(v_v-)";
+String netgotchiFaceBlink = "( .__.)";
+String netgotchiFaceSleep = "(-__- )";
+String netgotchiFaceSurprised = "(o__o)";
+String netgotchiFaceHappy = "(^=^)";
+String netgotchiFaceSad = "(T_T)";
+String netgotchiFaceSad2 = "(T__T)";
+String netgotchiFaceSuspicious = "(>_>)";
+String netgotchiFaceSuspicious2 = "(<_<)";
+String netgotchiFaceHit = "(x_x)";
+String netgotchiFaceHit2 = "(X__X)";
+String netgotchiFaceStarryEyed = "(*_*)";
+String netgotchiScreenMessage = "Saving planets!";
+String netgotchiCurrentFace = "";
 int animState = 0;
 int animation = 0;
 long old_seconds = 0;
+long serial_info_seconds=0;
 int moveX = 0;
 IPAddress currentIP;
 
@@ -96,37 +98,79 @@ const char* password = "";
 
 bool shouldSaveConfig = false;
 bool useButtonToResetFlash = true;
+bool debug = true;
+bool headless = true;
+
+
+//Wrapper functions for other display compatibility
+void displayPrintln(String line = "") {
+  display.println(line);
+}
+
+void displaySetCursor(int x, int y) {
+  display.setCursor(x, y);
+}
+
+void displayPrint(String line) {
+  display.print(line);
+}
+
+
+void displayClearDisplay() {
+  display.clearDisplay();
+}
+
+void displaySetSize(int size) {
+  display.setTextSize(size);
+}
+
+void displaySetTextColor(int color) {
+  display.setTextColor(color);
+}
+
+void displayPrintDate(const char* format, int day, int month, int year) {
+  display.printf(format, day, month, year);
+}
+
+void displayDisplay()
+{
+  display.display();
+}
+
+void SerialPrintLn(String message){
+  if(debug)Serial.println(message);
+}
+///end of wrapper functions
 
 
 void setup() {
   Serial.begin(115200);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
+    SerialPrintLn(F("SSD1306 allocation failed"));
     for (;;)
       ;
   }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println("Netgotchi v." + String(VERSION));
-  display.println("created by MXZZ ");
+  displayClearDisplay();
+  displaySetSize(1);
+  displaySetTextColor(1); //white color
+  displaySetCursor(0, 0);
+  displayPrintln("Netgotchi v." + String(VERSION));
+  displayPrintln("created by MXZZ ");
   delay(1000);
 
   if (useWifiManager) {
-    display.println("TO Configure WIFI");
-    display.println("USE: AutoConnectAP");
-  } else display.println("Connecting to WiFi");
+    displayPrintln("TO Configure WIFI");
+    displayPrintln("USE: AutoConnectAP");
+  } else displayPrintln("Connecting to WiFi");
 
-  display.display();
+  displayDisplay();
 
   if (useWifiManager) {
 
-    
     if (wifiManager.autoConnect("AutoConnectAP")) {
-      display.println("Connection Successful");
-      display.display();
+      displayPrintln("Connection Successful");
+      displayDisplay();
     }
   } else {
     WiFi.begin(ssid, password);
@@ -136,17 +180,17 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
-    display.print(".");
-    display.display();
+    displayPrint(".");
+    displayDisplay();
   }
   currentIP = WiFi.localIP();
-  Serial.println(currentIP.toString().c_str());
+  SerialPrintLn(currentIP.toString().c_str());
   timeClient.begin();
   initStars();
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
 
   // Initialize the flash button pin as input
-  if(useButtonToResetFlash)pinMode(flashButtonPin, INPUT_PULLUP);
+  if (useButtonToResetFlash) pinMode(flashButtonPin, INPUT_PULLUP);
 }
 
 void loop() {
@@ -189,42 +233,42 @@ void loop() {
   ftpHoneypotScan();
 
   if (animation == 0) drawSpace();
-  if (animation == 1) pwnagotchi_face();
+  if (animation == 1) netgotchi_face();
   if (animation > 1) animation = 0;
 
-  if(useButtonToResetFlash)buttonLoops();
-
+  if (useButtonToResetFlash) buttonLoops();
+  if (headless) headlessInfo();
   delay(5);
 }
 
 void NetworkStats() {
-  display.clearDisplay();
-  display.setCursor(0, 8);
+  displayClearDisplay();
+  displaySetCursor(0, 8);
   if (WiFi.status() == WL_CONNECTED) networkStatus = "connected";
   else networkStatus = "disconnected";
-  display.print("Network: " + networkStatus);
-  display.setCursor(0, 16);
+  displayPrint("Network: " + networkStatus);
+  displaySetCursor(0, 16);
 
   if (scanOnce) {
     IPAddress ip(1, 1, 1, 1);  // ping goole cloudflare
-    Serial.println("pinging cloudflare");
+    SerialPrintLn("pinging cloudflare");
 
     if (Ping.ping(ip, 2)) {
       externalNetworkStatus = "Reachable";
-      display.println();
+      displayPrintln();
       scanOnce = false;
       stats = "\n min: " + String(Ping.minTime()) + "ms \n avg: " + String(Ping.averageTime()) + "ms \n max: " + String(Ping.maxTime()) + "ms";
       delay(500);
-      Serial.println("ping sent");
-      Serial.println(stats);
+      SerialPrintLn("ping sent");
+      SerialPrintLn(stats);
 
       //serviceDiscover();
 
     } else externalNetworkStatus = "Unreachable";
   }
-  display.println("Network Speed: " + stats);
-  display.println("Internet: " + externalNetworkStatus);
-  display.display();
+  displayPrintln("Network Speed: " + stats);
+  displayPrintln("Internet: " + externalNetworkStatus);
+  displayDisplay();
   delay(5000);
 }
 
@@ -238,11 +282,11 @@ void ftpHoneypotScan() {
 
 void drawSpace() {
 
-  display.clearDisplay();
+  displayClearDisplay();
   updateAndDrawStars();
   drawUFO();
   displayTimeAndDate();
-  display.display();
+  displayDisplay();
   delay(10);
 }
 
@@ -288,48 +332,48 @@ void displayTimeAndDate() {
   int currentMonth = ptm->tm_mon + 1;
   int currentYear = ptm->tm_year + 1900;
 
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(5, 0);
-  display.print(formattedTime);
-  display.setCursor(0, 8);
-  display.printf("%02d/%02d/%d", currentDay, currentMonth, currentYear);
-  display.setCursor(0, 55);
-  display.print("Host found:" + String(ipnum));
-  display.setCursor(75, 0);
-  display.print("Honeypot");
+  displaySetSize(1);
+  displaySetTextColor(WHITE);
+  displaySetCursor(5, 0);
+  displayPrint(formattedTime);
+  displaySetCursor(0, 8);
+  displayPrintDate("%02d/%02d/%d", currentDay, currentMonth, currentYear);
+  displaySetCursor(0, 55);
+  displayPrint("Host found:" + String(ipnum));
+  displaySetCursor(75, 0);
+  displayPrint("Honeypot");
   if (honeypotTriggered) {
     if (((seconds % 2) == 0)) {
-      display.setCursor(80, 8);
-      display.print("Breached");
+      displaySetCursor(80, 8);
+      displayPrint("Breached");
     }
   } else {
-    display.setCursor(80, 8);
-    display.print("OK");
+    displaySetCursor(80, 8);
+    displayPrint("OK");
   }
 
-  display.setCursor(90, 55);
+  displaySetCursor(90, 55);
   if (startScan)
-    display.print("Scan");
-  else display.print("Idle");
+    displayPrint("Scan");
+  else displayPrint("Idle");
 }
 
 char hostString[16] = { 0 };
 void serviceDiscover() {
   if (!MDNS.begin(hostString)) {
-    Serial.println("Error setting up MDNS responder!");
+    SerialPrintLn("Error setting up MDNS responder!");
   } else {
-    //    Serial.println("mDNS responder started");
+    //    SerialPrintLn("mDNS responder started");
     //    MDNS.addService("esp", "tcp", 8080);  // Announce esp tcp service on port 8080
 
-    Serial.println("Sending mDNS query");
+    SerialPrintLn("Sending mDNS query");
     int n = MDNS.queryService("https", "tcp");  // Send out query for esp tcp services
-    Serial.println("mDNS query done");
+    SerialPrintLn("mDNS query done");
     if (n == 0) {
-      Serial.println("no services found");
+      SerialPrintLn("no services found");
     } else {
       Serial.print(n);
-      Serial.println(" service(s) found");
+      SerialPrintLn(" service(s) found");
       for (int i = 0; i < n; ++i) {
         // Print details for each service found
         Serial.print(MDNS.hostname(i));
@@ -341,37 +385,37 @@ void serviceDiscover() {
 }
 
 void displayIPS() {
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println("Found Hosts:" + String(ipnum));
+  displayClearDisplay();
+  displaySetCursor(0, 0);
+  displayPrintln("Found Hosts:" + String(ipnum));
 
   //Ipprefix is based on the current assigned IP type
   //change this to hardcode your subnet
-  String ipprefix = String(currentIP[0]) +"."+String(currentIP[1])+"."+String(currentIP[2])+".";
+  String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
 
   for (int j = 0; j < max_ip; j++) {
 
     if (ips[j] == 1 || ips[j] == -1) {
       if (iprows >= 4) {
-        display.clearDisplay();
-        display.setCursor(5, 0);
-        display.println("Hosts:" + String(ipnum));
+        displayClearDisplay();
+        displaySetCursor(5, 0);
+        displayPrintln("Hosts:" + String(ipnum));
 
         iprows = 0;
       }
-      display.setCursor(0, 20 + (iprows)*10);
+      displaySetCursor(0, 20 + (iprows)*10);
       if (ips[j] == 1) {
         String al = ipprefix + String(j) + " alive";
-        display.println(al);
+        displayPrintln(al);
         iprows++;
       }
       if (ips[j] == -1) {
         String dc = ipprefix + String(j) + " disconnected";
-        display.println(dc);
+        displayPrintln(dc);
         iprows++;
       }
       delay(1500);  // Small delay to avoid overwhelming the display
-      display.display();
+      displayDisplay();
     }
   }
   if (ipnum > 0) delay(5000);
@@ -381,9 +425,9 @@ void pingNetwork(int i) {
   status = "Scanning";
 
   //change this to hardcode your subnet
-  IPAddress ip = IPAddress(currentIP[0], currentIP[1], currentIP[2], i );
+  IPAddress ip = IPAddress(currentIP[0], currentIP[1], currentIP[2], i);
 
-  Serial.println(ip.toString().c_str());
+  SerialPrintLn(ip.toString().c_str());
   if (Ping.ping(ip, 1)) {
     iprows++;
     ipnum++;
@@ -397,12 +441,12 @@ void pingNetwork(int i) {
   }
 }
 
-void pwnagotchi_face() {
-  display.clearDisplay();
+void netgotchi_face() {
+  displayClearDisplay();
   updateAndDrawStars();  // Draw the star effect
   displayTimeAndDate();
-  display.setTextSize(2);
-  drawPwnagotchiFace(animState);
+  displaySetSize(2);
+  drawnetgotchiFace(animState);
 
   if (seconds - old_seconds > 1) {
     moveX = moveX + random(-5, 5);
@@ -413,54 +457,54 @@ void pwnagotchi_face() {
     animState++;
     if (animState > 5) animState = 0;
   }
-  display.display();
-  display.setTextSize(1);
+  displayDisplay();
+  displaySetSize(1);
 }
 
-void drawPwnagotchiFace(int state) {
-  display.setCursor(30 + moveX, 30);
-
+void drawnetgotchiFace(int state) {
+  displaySetCursor(30 + moveX, 30);
   if (honeypotTriggered == false) {
     if (state == 0) {
-      display.println((pwnagotchiFace));
+      netgotchiCurrentFace = netgotchiFace;
     }
     if (state == 1) {
-      display.println((pwnagotchiFace2));
+      netgotchiCurrentFace = netgotchiFace2;
     }
 
     if (state == 2) {
-      display.println((pwnagotchiFaceBlink));
+       netgotchiCurrentFace = netgotchiFaceBlink;
     }
 
     if (state == 3) {
-      display.println((pwnagotchiFaceSleep));
+      netgotchiCurrentFace = netgotchiFaceSleep;
     }
     if (state == 4) {
-      display.println((pwnagotchiFaceSurprised));
+      netgotchiCurrentFace = netgotchiFaceSurprised;
     }
     if (state == 5) {
-      display.println((pwnagotchiFaceHappy));
+      netgotchiCurrentFace = netgotchiFaceHappy;
     }
   } else {
     if (state == 0) {
-      display.println((pwnagotchiFaceSad));
+     netgotchiCurrentFace = netgotchiFaceSad;
     }
     if (state == 1) {
-      display.println((pwnagotchiFaceSad2));
+      netgotchiCurrentFace = netgotchiFaceSad2;
     }
     if (state == 2) {
-      display.println((pwnagotchiFaceSuspicious));
+      netgotchiCurrentFace = netgotchiFaceSuspicious;
     }
     if (state == 3) {
-      display.println((pwnagotchiFaceSuspicious2));
+      netgotchiCurrentFace = netgotchiFaceSuspicious2;
     }
     if (state == 4) {
-      display.println((pwnagotchiFaceHit));
+      netgotchiCurrentFace = netgotchiFaceHit;
     }
     if (state == 5) {
-      display.println((pwnagotchiFaceHit2));
+      netgotchiCurrentFace = netgotchiFaceHit2;
     }
   }
+  displayPrintln(netgotchiCurrentFace);
 }
 
 
@@ -471,13 +515,13 @@ void buttonLoops() {
     delay(50);
     if (digitalRead(flashButtonPin) == LOW) {
       // Button is still pressed, proceed to erase EEPROM and WiFiManager settings
-      display.clearDisplay();
-      display.println("Flash button pressed. WiFiManager settings...");
+      displayClearDisplay();
+      displayPrintln("Flash button pressed. WiFiManager settings...");
       // Erase WiFiManager settings
       wifiManager.resetSettings();
 
-      display.println("EEPROM and WiFiManager settings erased.");
-      display.println("Restart this device");
+      displayPrintln("EEPROM and WiFiManager settings erased.");
+      displayPrintln("Restart this device");
 
       // Optional: Add a delay to prevent multiple erases in quick succession
       delay(10000);
@@ -486,4 +530,12 @@ void buttonLoops() {
   }
 }
 
-
+void headlessInfo()
+{ 
+  //slow down the print in the serial console
+  if(serial_info_seconds - seconds > 1)
+  {
+    serial_info_seconds=seconds;
+    SerialPrintLn(netgotchiCurrentFace + " Honeypot :"+ (honeypotTriggered? "breached" : "OK") + (" Host-Found:"+ String(ipnum)));
+  }
+}
