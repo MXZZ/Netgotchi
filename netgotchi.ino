@@ -18,7 +18,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-const float VERSION = 0.7;
+const float VERSION = 0.8;
 
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -76,6 +76,8 @@ String netgotchiFaceSuspicious2 = "(<_<)";
 String netgotchiFaceHit = "(x_x)";
 String netgotchiFaceHit2 = "(X__X)";
 String netgotchiFaceStarryEyed = "(*_*)";
+String netgotchiInUfo1 = " <(0-0-0)> ";
+String netgotchiInUfo2 = " <(o-o-o)> ";
 String netgotchiScreenMessage = "Saving planets!";
 String netgotchiCurrentFace = "";
 int animState = 0;
@@ -533,7 +535,7 @@ void buttonLoops() {
 void headlessInfo()
 { 
   //slow down the print in the serial console
-  if(serial_info_seconds - seconds > 1)
+  if(  seconds - serial_info_seconds > 1)
   {
     serial_info_seconds=seconds;
     SerialPrintLn(netgotchiCurrentFace + " Honeypot :"+ (honeypotTriggered? "breached" : "OK") + (" Host-Found:"+ String(ipnum)));
