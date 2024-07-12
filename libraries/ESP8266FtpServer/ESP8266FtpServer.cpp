@@ -32,6 +32,7 @@ WiFiServer ftpServer( FTP_CTRL_PORT );
 WiFiServer dataServer( FTP_DATA_PORT_PASV );
 
 boolean honeypot=false;
+String ipandtime = "";
 
 void FtpServer::begin(String uname, String pword)
 {
@@ -99,6 +100,7 @@ void FtpServer::handleFTP()
       millisEndConnection = millis() + 10 * 1000 ; // wait client id during 10 s.
       cmdStatus = 3;
 	  honeypot=true;
+	  ipandtime= client.remoteIP().toString();
     }
   }
   else if( readChar() > 0 )         // got response
@@ -172,6 +174,9 @@ void FtpServer::disconnectClient()
 boolean FtpServer::returnHoneypotStatus()
 {
 	return honeypot;
+}
+String FtpServer::getHoneyPotBreachIPandTime(){
+	return ipandtime;
 }
 void FtpServer::setHoneypotStatus(boolean honey)
 {

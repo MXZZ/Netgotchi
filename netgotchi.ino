@@ -18,7 +18,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-const float VERSION = 0.8;
+const float VERSION = 0.9;
 
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -41,6 +41,7 @@ unsigned long previousMillisScan = 0;
 unsigned long previousMillisPing = 0;
 
 
+
 const long interval = 20000;  //
 int i = 0;
 int ipnum = 0;   // display counter
@@ -50,6 +51,7 @@ int max_ip = 255;
 bool startScan = false;
 const long intervalScan = 60000 * 4;
 const long intervalPing = 60000 * 5;
+
 int seconds = 0;
 
 
@@ -83,7 +85,7 @@ String netgotchiCurrentFace = "";
 int animState = 0;
 int animation = 0;
 long old_seconds = 0;
-long serial_info_seconds=0;
+long serial_info_seconds = 0;
 int moveX = 0;
 IPAddress currentIP;
 
@@ -103,6 +105,26 @@ bool useButtonToResetFlash = true;
 bool debug = true;
 bool headless = true;
 
+bool securityScanActive = true;
+bool skipFTPScan = true;
+int vulnerabilitiesFound=0;
+
+// List of potentially dangerous services and their ports
+struct Service {
+  const char* name;
+  uint16_t port;
+};
+//Scan for dangerous services opened in the network
+Service dangerousServices[] = {
+  { "Telnet", 23 },
+  { "FTP", 21 },
+  { "SSH", 22 },
+  { "VNC", 5900 },
+  { "RDP", 3389 },
+  { "SMB", 445 },
+  { "HTTP", 80 },
+  { "HTTPS", 443 }
+};
 
 //Wrapper functions for other display compatibility
 void displayPrintln(String line = "") {
@@ -134,13 +156,15 @@ void displayPrintDate(const char* format, int day, int month, int year) {
   display.printf(format, day, month, year);
 }
 
-void displayDisplay()
-{
+void displayDisplay() {
   display.display();
 }
 
-void SerialPrintLn(String message){
-  if(debug)Serial.println(message);
+void SerialPrintLn(String message) {
+  if (debug) Serial.println(message);
+}
+void SerialPrintLn(int message) {
+  if (debug) Serial.println(message);
 }
 ///end of wrapper functions
 
@@ -155,7 +179,7 @@ void setup() {
   }
   displayClearDisplay();
   displaySetSize(1);
-  displaySetTextColor(1); //white color
+  displaySetTextColor(1);  //white color
   displaySetCursor(0, 0);
   displayPrintln("Netgotchi v." + String(VERSION));
   displayPrintln("created by MXZZ ");
@@ -222,6 +246,7 @@ void loop() {
     scanOnce = true;
   }
 
+
   if (startScan) {
     if (i < 256) {
       pingNetwork(i);
@@ -229,6 +254,7 @@ void loop() {
     } else {
       i = 0;
       ipnum = 0;
+      vulnerabilitiesFound=0;
     }
   }
 
@@ -240,6 +266,7 @@ void loop() {
 
   if (useButtonToResetFlash) buttonLoops();
   if (headless) headlessInfo();
+
   delay(5);
 }
 
@@ -341,13 +368,15 @@ void displayTimeAndDate() {
   displaySetCursor(0, 8);
   displayPrintDate("%02d/%02d/%d", currentDay, currentMonth, currentYear);
   displaySetCursor(0, 55);
-  displayPrint("Host found:" + String(ipnum));
+  displayPrint("Hosts:" + String(ipnum) + " VU:"+ String(vulnerabilitiesFound));
   displaySetCursor(75, 0);
   displayPrint("Honeypot");
   if (honeypotTriggered) {
     if (((seconds % 2) == 0)) {
       displaySetCursor(80, 8);
       displayPrint("Breached");
+      displaySetCursor(40, 16);
+      displayPrint(ftpSrv.getHoneyPotBreachIPandTime());
     }
   } else {
     displaySetCursor(80, 8);
@@ -360,36 +389,11 @@ void displayTimeAndDate() {
   else displayPrint("Idle");
 }
 
-char hostString[16] = { 0 };
-void serviceDiscover() {
-  if (!MDNS.begin(hostString)) {
-    SerialPrintLn("Error setting up MDNS responder!");
-  } else {
-    //    SerialPrintLn("mDNS responder started");
-    //    MDNS.addService("esp", "tcp", 8080);  // Announce esp tcp service on port 8080
-
-    SerialPrintLn("Sending mDNS query");
-    int n = MDNS.queryService("https", "tcp");  // Send out query for esp tcp services
-    SerialPrintLn("mDNS query done");
-    if (n == 0) {
-      SerialPrintLn("no services found");
-    } else {
-      Serial.print(n);
-      SerialPrintLn(" service(s) found");
-      for (int i = 0; i < n; ++i) {
-        // Print details for each service found
-        Serial.print(MDNS.hostname(i));
-        Serial.print(MDNS.IP(i));
-        // Serial.print(MDNS.port(i));
-      }
-    }
-  }
-}
 
 void displayIPS() {
   displayClearDisplay();
   displaySetCursor(0, 0);
-  displayPrintln("Found Hosts:" + String(ipnum));
+  displayPrintln("Found Hosts:");
 
   //Ipprefix is based on the current assigned IP type
   //change this to hardcode your subnet
@@ -397,26 +401,33 @@ void displayIPS() {
 
   for (int j = 0; j < max_ip; j++) {
 
-    if (ips[j] == 1 || ips[j] == -1) {
+    if (ips[j] == 1 || ips[j] == -1 || ips[j] == 2) {
       if (iprows >= 4) {
         displayClearDisplay();
         displaySetCursor(5, 0);
         displayPrintln("Hosts:" + String(ipnum));
-
         iprows = 0;
       }
       displaySetCursor(0, 20 + (iprows)*10);
       if (ips[j] == 1) {
-        String al = ipprefix + String(j) + " alive";
+        String al = ipprefix + String(j) + " UP";
+        displayPrintln(al);
+        iprows++;
+      }
+      if (ips[j] == 2) {
+        String al = ipprefix + String(j) + " WRNG!";
         displayPrintln(al);
         iprows++;
       }
       if (ips[j] == -1) {
-        String dc = ipprefix + String(j) + " disconnected";
+        String dc = ipprefix + String(j) + " DOWN";
         displayPrintln(dc);
         iprows++;
       }
-      delay(1500);  // Small delay to avoid overwhelming the display
+
+      delay(500);  // Small delay to avoid overwhelming the display
+
+      if (iprows == 5) delay(3000);
       displayDisplay();
     }
   }
@@ -425,20 +436,29 @@ void displayIPS() {
 
 void pingNetwork(int i) {
   status = "Scanning";
-
   //change this to hardcode your subnet
   IPAddress ip = IPAddress(currentIP[0], currentIP[1], currentIP[2], i);
-
-  SerialPrintLn(ip.toString().c_str());
   if (Ping.ping(ip, 1)) {
+    SerialPrintLn("Alive");
+    SerialPrintLn(ip.toString().c_str());
+
     iprows++;
     ipnum++;
     //store
     ips[i] = 1;
+
+    if (securityScanActive) {
+      int scanresult = scanForDangerousServices(ip);
+      if (scanresult == 1) {
+        SerialPrintLn(String(scanresult));
+        ips[i] = 2;
+      }
+    }
   } else {
     //not found
     if (ips[i] == -1) ips[i] = 0;       //disconnected - remove
     else if (ips[i] == 1) ips[i] = -1;  //recently disconnected
+    else if (ips[i] == 2) ips[i] = -1;  // device disconnected, with warning
     else ips[i] = 0;
   }
 }
@@ -474,7 +494,7 @@ void drawnetgotchiFace(int state) {
     }
 
     if (state == 2) {
-       netgotchiCurrentFace = netgotchiFaceBlink;
+      netgotchiCurrentFace = netgotchiFaceBlink;
     }
 
     if (state == 3) {
@@ -488,7 +508,7 @@ void drawnetgotchiFace(int state) {
     }
   } else {
     if (state == 0) {
-     netgotchiCurrentFace = netgotchiFaceSad;
+      netgotchiCurrentFace = netgotchiFaceSad;
     }
     if (state == 1) {
       netgotchiCurrentFace = netgotchiFaceSad2;
@@ -532,12 +552,30 @@ void buttonLoops() {
   }
 }
 
-void headlessInfo()
-{ 
+void headlessInfo() {
   //slow down the print in the serial console
-  if(  seconds - serial_info_seconds > 1)
-  {
-    serial_info_seconds=seconds;
-    SerialPrintLn(netgotchiCurrentFace + " Honeypot :"+ (honeypotTriggered? "breached" : "OK") + (" Host-Found:"+ String(ipnum)));
+  if (seconds - serial_info_seconds > 1) {
+    serial_info_seconds = seconds;
+    SerialPrintLn(netgotchiCurrentFace + " Honeypot :" + (honeypotTriggered ? "breached" : "OK") + (" Host-Found:" + String(ipnum)) + (" Vulnerabilities:" +  String(vulnerabilitiesFound)));
   }
+}
+
+int scanForDangerousServices(IPAddress ip) {
+  WiFiClient client;
+  for (int i = 0; i < sizeof(dangerousServices) / sizeof(dangerousServices[0]); ++i) {
+    //skip FTP scan if you have other netgotchi / ftp server in the network.
+    if(skipFTPScan && dangerousServices[i].name == "FTP") continue;
+    if (client.connect(ip, dangerousServices[i].port)) {
+      Serial.print("Open port found: ");
+      Serial.print(dangerousServices[i].name);
+      Serial.print(" (");
+      Serial.print(dangerousServices[i].port);
+      Serial.print(") on ");
+      Serial.println(ip);
+      client.stop();
+      vulnerabilitiesFound++;
+      return 1;
+    }
+  }
+  return 0;
 }

@@ -53,6 +53,7 @@ public:
   void    handleFTP();
   boolean  returnHoneypotStatus();
   void setHoneypotStatus( boolean honey);
+  String getHoneyPotBreachIPandTime();
 
 private:
   void    iniVariables();
