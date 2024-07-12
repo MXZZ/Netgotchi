@@ -21,6 +21,7 @@ Alternative links : [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETG
 - SSD1306 display ( ic version ) 
 - Usb cable 
 - optional 3d printed parts ( from thingiverse.com)
+-    Community cases:  Wemos d1 https://www.printables.com/model/510481-terminal-for-ssd1306-096-oled-and-wemos-d1-mini ( thanks porkcube for the link)
 
   or get an assembled one here  : ~~[official shop *Ollestore* on Etsy](https://ollestore.etsy.com/listing/1742406142) and support the development!~~ ( Currently closed by Etsy , trying to resolve the issue) 
 Alternative links : [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3)
@@ -52,6 +53,20 @@ Alternative links : [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETG
    ![immagine](https://github.com/MXZZ/Netgotchi/assets/3322271/f12ba979-5936-4bee-9d36-eba67ddebf59)
   - open script pyserial_cyberdeck and change line 5: /dev/ttyUSB0 to your COM port  ( on linux is usually /dev/ttyUSB0 ) 
   - run script utils/cyberdeck/pyserial_cyberdeck.py
+
+# Scan for Vulnerabilities in the network ( v0.9 update ) 
+  - Netgotchi now scan your network for services like quick-scan of NMAP - it will scan host for know vulnerables services including :
+  { "Telnet", 23 },
+  { "FTP", 21 },
+  { "SSH", 22 },
+  { "VNC", 5900 },
+  { "RDP", 3389 },
+  { "SMB", 445 },
+  { "HTTP", 80 },
+  { "HTTPS", 443 }
+- report any vulnerabilities and vulnerable hosts with a "WRNG!"
+- *This may trigger other Netgotchi in the same network* , so there is a flag enabled by default to skip the FTP scan.
+- can be disabled from the *securityScanActive* flag
 
 # Suppor the project
  Enjoy your Netgotchi !
