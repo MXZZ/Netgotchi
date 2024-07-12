@@ -426,8 +426,7 @@ void displayIPS() {
       }
 
       delay(500);  // Small delay to avoid overwhelming the display
-
-      if (iprows == 5) delay(3000);
+      if (iprows == 4) delay(3000);
       displayDisplay();
     }
   }
