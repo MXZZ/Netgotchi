@@ -11,7 +11,7 @@ A small arduino .ino script with some great functions to detect intruders or bre
 
 ![immagine](https://github.com/MXZZ/Netgotchi/assets/3322271/cf8d7fec-7b33-4f14-9992-8cb4806633f2) ![immagine](https://github.com/MXZZ/Netgotchi/assets/3322271/68f4fe6c-9172-422b-ba39-ee901c098840)
 
-Get an official build and support the development from [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3)
+Get an official build and support the development from [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3) or [Amazon](https://amzn.to/4dd5yjA) 
 
 
 
@@ -22,7 +22,7 @@ Get an official build and support the development from [Netgotchi on Bonanza](ht
 - optional 3d printed parts ( from thingiverse.com)
 -    Community cases:  Wemos d1 https://www.printables.com/model/510481-terminal-for-ssd1306-096-oled-and-wemos-d1-mini ( thanks porkcube for the link)
 
-  or get an assembled one here  : Get an official build and support the development from [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3)
+  or get an assembled one here  : Get an official build and support the development from [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3) or [Amazon](https://amzn.to/4dd5yjA) 
 
 # Diagram 
 ![diagram_netgotchi](https://github.com/MXZZ/Netgotchi/assets/3322271/54fb9be5-4fe4-4ff3-b24a-f2a05287d893)
