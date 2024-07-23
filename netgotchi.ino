@@ -18,7 +18,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-const float VERSION = 0.9;
+const float VERSION = 1.0;
 
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -30,15 +30,18 @@ float stars[NUM_STARS][3];
 float ufoX = SCREEN_WIDTH / 2;
 float ufoY = SCREEN_HEIGHT / 2;
 float ufoZ = 0;
+long timeOffset = 7200;  // offset for GMT+2 from https://www.epochconverter.com/timezones
 
 String status = "Idle";
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org");
+NTPClient timeClient(ntpUDP, "pool.ntp.org", timeOffset);
 
 unsigned long previousMillis = 0;
 unsigned long previousMillisScan = 0;
 unsigned long previousMillisPing = 0;
+unsigned long previousMillisSoundAlert = 0;
+
 
 
 
@@ -51,6 +54,7 @@ int max_ip = 255;
 bool startScan = false;
 const long intervalScan = 60000 * 4;
 const long intervalPing = 60000 * 5;
+const long intervalSound = 60000 * 2;
 
 int seconds = 0;
 
@@ -60,6 +64,8 @@ int ips[255] = {};
 bool pingScanDetected = false;
 unsigned long lastPingTime = 0;
 bool honeypotTriggered = false;
+bool sounds = true;
+int buzzer_pin = 13;
 
 String externalNetworkStatus = "";
 String networkStatus = "";
@@ -107,7 +113,7 @@ bool headless = true;
 
 bool securityScanActive = true;
 bool skipFTPScan = true;
-int vulnerabilitiesFound=0;
+int vulnerabilitiesFound = 0;
 
 // List of potentially dangerous services and their ports
 struct Service {
@@ -223,6 +229,7 @@ void loop() {
   unsigned long currentMillis = millis();
   seconds = currentMillis / 1000;
 
+  //change screen event
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     if (currentScreen == 0) {};
@@ -235,16 +242,24 @@ void loop() {
     currentScreen++;
   }
 
-
+  //ping scan event
   if (currentMillis - previousMillisScan >= intervalScan) {
     previousMillisScan = currentMillis;
     startScan = !startScan;
   }
 
+  //network integrity event
   if (currentMillis - previousMillisPing >= intervalPing) {
     previousMillisPing = currentMillis;
     scanOnce = true;
   }
+
+  //sound alert event
+  if (currentMillis - previousMillisSoundAlert >= intervalSound) {
+    previousMillisSoundAlert = currentMillis;
+    if (sounds && honeypotTriggered) playAlert();
+  }
+
 
 
   if (startScan) {
@@ -254,7 +269,7 @@ void loop() {
     } else {
       i = 0;
       ipnum = 0;
-      vulnerabilitiesFound=0;
+      vulnerabilitiesFound = 0;
     }
   }
 
@@ -306,6 +321,8 @@ void ftpHoneypotScan() {
   // Check for FTP connections
   if (ftpSrv.returnHoneypotStatus()) {
     honeypotTriggered = true;
+    //adding this delay to avoid nmap induced wdt reset
+    delay(500);
   }
 }
 
@@ -368,7 +385,7 @@ void displayTimeAndDate() {
   displaySetCursor(0, 8);
   displayPrintDate("%02d/%02d/%d", currentDay, currentMonth, currentYear);
   displaySetCursor(0, 55);
-  displayPrint("Hosts:" + String(ipnum) + " VU:"+ String(vulnerabilitiesFound));
+  displayPrint("Hosts:" + String(ipnum) + " VU:" + String(vulnerabilitiesFound));
   displaySetCursor(75, 0);
   displayPrint("Honeypot");
   if (honeypotTriggered) {
@@ -555,7 +572,7 @@ void headlessInfo() {
   //slow down the print in the serial console
   if (seconds - serial_info_seconds > 1) {
     serial_info_seconds = seconds;
-    SerialPrintLn(netgotchiCurrentFace + " Honeypot :" + (honeypotTriggered ? "breached" : "OK") + (" Host-Found:" + String(ipnum)) + (" Vulnerabilities:" +  String(vulnerabilitiesFound)));
+    SerialPrintLn(netgotchiCurrentFace + " Honeypot :" + (honeypotTriggered ? "breached" : "OK") + (" Host-Found:" + String(ipnum)) + (" Vulnerabilities:" + String(vulnerabilitiesFound)));
   }
 }
 
@@ -563,7 +580,7 @@ int scanForDangerousServices(IPAddress ip) {
   WiFiClient client;
   for (int i = 0; i < sizeof(dangerousServices) / sizeof(dangerousServices[0]); ++i) {
     //skip FTP scan if you have other netgotchi / ftp server in the network.
-    if(skipFTPScan && dangerousServices[i].name == "FTP") continue;
+    if (skipFTPScan && dangerousServices[i].name == "FTP") continue;
     if (client.connect(ip, dangerousServices[i].port)) {
       Serial.print("Open port found: ");
       Serial.print(dangerousServices[i].name);
@@ -577,4 +594,15 @@ int scanForDangerousServices(IPAddress ip) {
     }
   }
   return 0;
+}
+
+
+void playAlert() {
+  tone(buzzer_pin, 500);  // Send 1kHz sound signal
+  delay(500);
+  noTone(buzzer_pin);
+  delay(500);
+  tone(buzzer_pin, 500);  // Send 1kHz sound signal
+  delay(500);
+  noTone(buzzer_pin);
 }
