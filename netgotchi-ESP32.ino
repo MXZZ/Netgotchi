@@ -1,7 +1,3 @@
-// Netgotchi - lives to protect your network!
-// Created by MXZZ https://github.com/MXZZ added support for ESP32 by itsOwen
-// GNU General Public License v3.0
-
 #include <WiFi.h>
 #include <ESPping.h>
 #include <Wire.h>
@@ -374,9 +370,9 @@ void initStars() {
 }
 
 void ftpHoneypotScan() {
-  ftpSrv.handleFTP();
-
-  if (!skipFTPScan) {
+  ftpSrv.handleFTP(); 
+  // we need to make this better
+  if (!skipFTPScan) { 
     honeypotTriggered = true;
     SerialPrintLn("Honeypot triggered!");
     vulnerabilitiesFound++;
@@ -389,7 +385,7 @@ void buttonLoops() {
     displayPrintln("Resetting WiFi config...");
     displayDisplay();
     wifiManager.resetSettings();
-    delay(2000); 
+    delay(2000);  
     ESP.restart(); 
   }
 }
@@ -405,7 +401,7 @@ void headlessInfo() {
 }
 
 void playAlert() {
-  tone(buzzer_pin, 1000, 500);
+  tone(buzzer_pin, 1000, 500); 
   delay(1000);
   noTone(buzzer_pin);
   SerialPrintLn("Played sound alert.");
