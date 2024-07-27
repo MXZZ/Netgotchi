@@ -204,27 +204,6 @@ void setup() {
 
   if (useButtonToResetFlash) pinMode(flashButtonPin, INPUT_PULLUP);
   
-  #ifdef USE_ESP32
-    // Initialize LEDC for ESP32 buzzer
-    ledc_timer_config_t ledc_timer = {
-      .speed_mode       = LEDC_HIGH_SPEED_MODE,
-      .duty_resolution  = LEDC_TIMER_8_BIT,
-      .timer_num        = LEDC_TIMER_0,
-      .freq_hz          = 1000,
-      .clk_cfg          = LEDC_AUTO_CLK
-    };
-    ledc_timer_config(&ledc_timer);
-
-    ledc_channel_config_t ledc_channel = {
-      .gpio_num   = buzzer_pin,
-      .speed_mode = LEDC_HIGH_SPEED_MODE,
-      .channel    = LEDC_CHANNEL_0,
-      .timer_sel  = LEDC_TIMER_0,
-      .duty       = 0,
-      .hpoint     = 0
-    };
-    ledc_channel_config(&ledc_channel);
-  #endif
 }
 
 void loop() {
@@ -390,10 +369,9 @@ void displayTimeAndDate() {
       displaySetCursor(80, 8);
       displayPrint("Breached");
       displaySetCursor(40, 16);
-      #ifdef USE_ESP8266
+
+      #if defined(ESP8266)
         displayPrint(ftpSrv.getHoneyPotBreachIPandTime());
-      #else
-        displayPrint("IP: " + WiFi.localIP().toString());
       #endif
     }
   } else {
