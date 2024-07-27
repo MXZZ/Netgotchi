@@ -10,7 +10,6 @@
 #elif defined(ESP8266)
   #include <ESP8266WiFi.h>
   #include <ESP8266FtpServer.h> 
-  #include <ESP8266mDNS.h>
 #else
   #error "This code is intended to run on ESP32 or ESP8266 platforms only."
 #endif
@@ -34,8 +33,8 @@ const float VERSION = 1.1;
 #define OLED_RESET -1
 
 //select to 1 which oled driver you have , default is ssd1306
-#define oled_type_ssd1306 0
-#define oled_type_sh1106 1
+#define oled_type_ssd1306 1
+#define oled_type_sh1106 0
 #define oled_type_ssd1305 0
 
 
@@ -312,7 +311,7 @@ void NetworkStats() {
 
 void ftpHoneypotScan() {
   ftpSrv.handleFTP();
-  #ifdef USE_ESP8266
+  #if defined(ESP8266)
     if (ftpSrv.returnHoneypotStatus()) {
       honeypotTriggered = true;
       delay(500);
@@ -556,7 +555,9 @@ int scanForDangerousServices(IPAddress ip) {
 }
 
 void playAlert() {
-#ifdef ESP8266
+#ifdef ESP32
+   //to add a library for Tone
+#elif defined(ESP8266)
     tone(buzzer_pin, 500);
     delay(500);
     noTone(buzzer_pin);
@@ -564,24 +565,7 @@ void playAlert() {
     tone(buzzer_pin, 500);
     delay(500);
     noTone(buzzer_pin);
-#elif ESP32
-    // Play first beep
-    ledc_set_freq(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0, 500);
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 127);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-    delay(500);
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-    delay(500);
-
-    // Play second beep
-    ledc_set_freq(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0, 500);
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 127);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-    delay(500);
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-  #endif
+#endif
 }
 
 void displayInit()
