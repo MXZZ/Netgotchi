@@ -2,28 +2,55 @@
 // Created by MXZZ https://github.com/MXZZ
 // GNU General Public License v3.0
 
-#include <ESP8266WiFi.h>
+// Include necessary libraries based on the board type
+
+#ifdef ESP32
+  #include <WiFi.h>
+  #include <ESP32FtpServer.h> 
+#elif defined(ESP8266)
+  #include <ESP8266WiFi.h>
+  #include <ESP8266FtpServer.h> 
+  #include <ESP8266mDNS.h>
+#else
+  #error "This code is intended to run on ESP32 or ESP8266 platforms only."
+#endif
+
+
 #include <ESPping.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+
+
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <WiFiManager.h>  // Include the WiFiManager library
-#include <ESP8266FtpServer.h>
-#include <ESP8266mDNS.h>
 
+const float VERSION = 1.1;
 
+//Oled Screen Selectors
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-const float VERSION = 1.0;
+
+//select to 1 which oled driver you have , default is ssd1306
+#define oled_type_ssd1306 0
+#define oled_type_sh1106 1
+#define oled_type_ssd1305 0
 
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#if oled_type_ssd1305
+  #include <Adafruit_SSD1305.h> 
+  Adafruit_SSD1305 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#elif oled_type_sh1106
+  #include <Adafruit_SH110X.h>
+  Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#elif oled_type_ssd1306
+  #include <Adafruit_SSD1306.h>
+  Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
+
 FtpServer ftpSrv;  // Create an instance of the FTP server
-
 
 const int NUM_STARS = 100;
 float stars[NUM_STARS][3];
@@ -43,8 +70,6 @@ unsigned long previousMillisPing = 0;
 unsigned long previousMillisSoundAlert = 0;
 
 
-
-
 const long interval = 20000;  //
 int i = 0;
 int ipnum = 0;   // display counter
@@ -57,7 +82,6 @@ const long intervalPing = 60000 * 5;
 const long intervalSound = 60000 * 2;
 
 int seconds = 0;
-
 
 int ips[255] = {};
 
@@ -178,11 +202,8 @@ void SerialPrintLn(int message) {
 void setup() {
   Serial.begin(115200);
 
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    SerialPrintLn(F("SSD1306 allocation failed"));
-    for (;;)
-      ;
-  }
+  displayInit();
+  
   displayClearDisplay();
   displaySetSize(1);
   displaySetTextColor(1);  //white color
@@ -353,16 +374,16 @@ void updateAndDrawStars() {
     int y = (stars[i][1] / stars[i][2]) * 32 + SCREEN_HEIGHT / 2;
 
     if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
-      display.drawPixel(x, y, WHITE);
+      display.drawPixel(x, y, 1);
     }
   }
 }
 
 void drawUFO() {
   int ufoSize = 8;
-  display.drawLine(ufoX - ufoSize, ufoY, ufoX + ufoSize, ufoY, WHITE);
-  display.drawLine(ufoX, ufoY - ufoSize / 2, ufoX, ufoY + ufoSize / 2, WHITE);
-  display.drawCircle(ufoX, ufoY, ufoSize / 2, WHITE);
+  display.drawLine(ufoX - ufoSize, ufoY, ufoX + ufoSize, ufoY, 1);
+  display.drawLine(ufoX, ufoY - ufoSize / 2, ufoX, ufoY + ufoSize / 2, 1);
+  display.drawCircle(ufoX, ufoY, ufoSize / 2, 1);
 
   ufoX = SCREEN_WIDTH / 2 + sin(millis() / 1000.0) * 20;
   ufoY = SCREEN_HEIGHT / 2 + cos(millis() / 1500.0) * 10;
@@ -379,7 +400,7 @@ void displayTimeAndDate() {
   int currentYear = ptm->tm_year + 1900;
 
   displaySetSize(1);
-  displaySetTextColor(WHITE);
+  displaySetTextColor(1);
   displaySetCursor(5, 0);
   displayPrint(formattedTime);
   displaySetCursor(0, 8);
@@ -605,4 +626,23 @@ void playAlert() {
   tone(buzzer_pin, 500);  // Send 1kHz sound signal
   delay(500);
   noTone(buzzer_pin);
+}
+
+void displayInit()
+{
+  //display initializer
+  if(oled_type_ssd1306){
+    if (!display.begin(2, 0x3C)) { 
+      // add "SSD1306_SWITCHCAPVCC, 0x3C" in the begin() if screen doesn't work. 
+      SerialPrintLn("SSD1306 allocation failed");
+      for (;;);
+    }
+  }
+  else
+  { 
+    if (!display.begin()) { 
+      SerialPrintLn("Display allocation failed");
+      for (;;);
+    }
+  }
 }
