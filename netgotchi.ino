@@ -1,29 +1,38 @@
 // Netgotchi - lives to protect your network!
 // Created by MXZZ https://github.com/MXZZ
+// ESP32 port by itsOwen https://github.com/itsOwen
 // GNU General Public License v3.0
 
-#include <ESP8266WiFi.h>
+// Select your board type here:
+// #define USE_ESP8266 // Comment this line and uncomment the next one to use ESP32
+#define USE_ESP32
+
+#ifdef USE_ESP8266
+  #include <ESP8266WiFi.h>
+  #include <ESP8266FtpServer.h>
+  #include <ESP8266mDNS.h>
+#else
+  #include <WiFi.h>
+  #include <ESP32FtpServer.h>
+  #include <ESPmDNS.h>
+  #include <driver/ledc.h>
+#endif
+
 #include <ESPping.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#include <WiFiManager.h>  // Include the WiFiManager library
-#include <ESP8266FtpServer.h>
-#include <ESP8266mDNS.h>
-
-
+#include <WiFiManager.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-const float VERSION = 1.0;
-
+const float VERSION = 1.1;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 FtpServer ftpSrv;  // Create an instance of the FTP server
-
 
 const int NUM_STARS = 100;
 float stars[NUM_STARS][3];
@@ -42,10 +51,7 @@ unsigned long previousMillisScan = 0;
 unsigned long previousMillisPing = 0;
 unsigned long previousMillisSoundAlert = 0;
 
-
-
-
-const long interval = 20000;  //
+const long interval = 20000;
 int i = 0;
 int ipnum = 0;   // display counter
 int iprows = 0;  // ip rows
@@ -57,7 +63,6 @@ const long intervalPing = 60000 * 5;
 const long intervalSound = 60000 * 2;
 
 int seconds = 0;
-
 
 int ips[255] = {};
 
@@ -99,10 +104,7 @@ const int flashButtonPin = 0;  // GPIO0 is connected to the flash button
 
 WiFiManager wifiManager;
 
-
-//Use wifi manager  or use the SSID/PASSWORD credential below
 bool useWifiManager = true;
-//ssid and password are used only when useWifiManager == false
 const char* ssid = "";
 const char* password = "";
 
@@ -115,12 +117,11 @@ bool securityScanActive = true;
 bool skipFTPScan = true;
 int vulnerabilitiesFound = 0;
 
-// List of potentially dangerous services and their ports
 struct Service {
   const char* name;
   uint16_t port;
 };
-//Scan for dangerous services opened in the network
+
 Service dangerousServices[] = {
   { "Telnet", 23 },
   { "FTP", 21 },
@@ -132,56 +133,23 @@ Service dangerousServices[] = {
   { "HTTPS", 443 }
 };
 
-//Wrapper functions for other display compatibility
-void displayPrintln(String line = "") {
-  display.println(line);
-}
-
-void displaySetCursor(int x, int y) {
-  display.setCursor(x, y);
-}
-
-void displayPrint(String line) {
-  display.print(line);
-}
-
-
-void displayClearDisplay() {
-  display.clearDisplay();
-}
-
-void displaySetSize(int size) {
-  display.setTextSize(size);
-}
-
-void displaySetTextColor(int color) {
-  display.setTextColor(color);
-}
-
-void displayPrintDate(const char* format, int day, int month, int year) {
-  display.printf(format, day, month, year);
-}
-
-void displayDisplay() {
-  display.display();
-}
-
-void SerialPrintLn(String message) {
-  if (debug) Serial.println(message);
-}
-void SerialPrintLn(int message) {
-  if (debug) Serial.println(message);
-}
-///end of wrapper functions
-
+void displayPrintln(String line = "") { display.println(line); }
+void displaySetCursor(int x, int y) { display.setCursor(x, y); }
+void displayPrint(String line) { display.print(line); }
+void displayClearDisplay() { display.clearDisplay(); }
+void displaySetSize(int size) { display.setTextSize(size); }
+void displaySetTextColor(int color) { display.setTextColor(color); }
+void displayPrintDate(const char* format, int day, int month, int year) { display.printf(format, day, month, year); }
+void displayDisplay() { display.display(); }
+void SerialPrintLn(String message) { if (debug) Serial.println(message); }
+void SerialPrintLn(int message) { if (debug) Serial.println(message); }
 
 void setup() {
   Serial.begin(115200);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     SerialPrintLn(F("SSD1306 allocation failed"));
-    for (;;)
-      ;
+    for (;;);
   }
   displayClearDisplay();
   displaySetSize(1);
@@ -199,7 +167,6 @@ void setup() {
   displayDisplay();
 
   if (useWifiManager) {
-
     if (wifiManager.autoConnect("AutoConnectAP")) {
       displayPrintln("Connection Successful");
       displayDisplay();
@@ -208,7 +175,6 @@ void setup() {
     WiFi.begin(ssid, password);
   }
 
-  //WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -221,15 +187,35 @@ void setup() {
   initStars();
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
 
-  // Initialize the flash button pin as input
   if (useButtonToResetFlash) pinMode(flashButtonPin, INPUT_PULLUP);
+  
+  #ifdef USE_ESP32
+    // Initialize LEDC for ESP32 buzzer
+    ledc_timer_config_t ledc_timer = {
+      .speed_mode       = LEDC_HIGH_SPEED_MODE,
+      .duty_resolution  = LEDC_TIMER_8_BIT,
+      .timer_num        = LEDC_TIMER_0,
+      .freq_hz          = 1000,
+      .clk_cfg          = LEDC_AUTO_CLK
+    };
+    ledc_timer_config(&ledc_timer);
+
+    ledc_channel_config_t ledc_channel = {
+      .gpio_num   = buzzer_pin,
+      .speed_mode = LEDC_HIGH_SPEED_MODE,
+      .channel    = LEDC_CHANNEL_0,
+      .timer_sel  = LEDC_TIMER_0,
+      .duty       = 0,
+      .hpoint     = 0
+    };
+    ledc_channel_config(&ledc_channel);
+  #endif
 }
 
 void loop() {
   unsigned long currentMillis = millis();
   seconds = currentMillis / 1000;
 
-  //change screen event
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     if (currentScreen == 0) {};
@@ -242,25 +228,20 @@ void loop() {
     currentScreen++;
   }
 
-  //ping scan event
   if (currentMillis - previousMillisScan >= intervalScan) {
     previousMillisScan = currentMillis;
     startScan = !startScan;
   }
 
-  //network integrity event
   if (currentMillis - previousMillisPing >= intervalPing) {
     previousMillisPing = currentMillis;
     scanOnce = true;
   }
 
-  //sound alert event
   if (currentMillis - previousMillisSoundAlert >= intervalSound) {
     previousMillisSoundAlert = currentMillis;
     if (sounds && honeypotTriggered) playAlert();
   }
-
-
 
   if (startScan) {
     if (i < 256) {
@@ -294,7 +275,7 @@ void NetworkStats() {
   displaySetCursor(0, 16);
 
   if (scanOnce) {
-    IPAddress ip(1, 1, 1, 1);  // ping goole cloudflare
+    IPAddress ip(1, 1, 1, 1);  // ping cloudflare
     SerialPrintLn("pinging cloudflare");
 
     if (Ping.ping(ip, 2)) {
@@ -305,9 +286,6 @@ void NetworkStats() {
       delay(500);
       SerialPrintLn("ping sent");
       SerialPrintLn(stats);
-
-      //serviceDiscover();
-
     } else externalNetworkStatus = "Unreachable";
   }
   displayPrintln("Network Speed: " + stats);
@@ -318,16 +296,20 @@ void NetworkStats() {
 
 void ftpHoneypotScan() {
   ftpSrv.handleFTP();
-  // Check for FTP connections
-  if (ftpSrv.returnHoneypotStatus()) {
-    honeypotTriggered = true;
-    //adding this delay to avoid nmap induced wdt reset
-    delay(500);
-  }
+  #ifdef USE_ESP8266
+    if (ftpSrv.returnHoneypotStatus()) {
+      honeypotTriggered = true;
+      delay(500);
+    }
+  #else
+    if (ftpSrv.isClientConnected()) {
+      honeypotTriggered = true;
+      delay(500);
+    }
+  #endif
 }
 
 void drawSpace() {
-
   displayClearDisplay();
   updateAndDrawStars();
   drawUFO();
@@ -393,7 +375,11 @@ void displayTimeAndDate() {
       displaySetCursor(80, 8);
       displayPrint("Breached");
       displaySetCursor(40, 16);
-      displayPrint(ftpSrv.getHoneyPotBreachIPandTime());
+      #ifdef USE_ESP8266
+        displayPrint(ftpSrv.getHoneyPotBreachIPandTime());
+      #else
+        displayPrint("IP: " + WiFi.localIP().toString());
+      #endif
     }
   } else {
     displaySetCursor(80, 8);
@@ -406,18 +392,14 @@ void displayTimeAndDate() {
   else displayPrint("Idle");
 }
 
-
 void displayIPS() {
   displayClearDisplay();
   displaySetCursor(0, 0);
   displayPrintln("Found Hosts:");
 
-  //Ipprefix is based on the current assigned IP type
-  //change this to hardcode your subnet
   String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
 
   for (int j = 0; j < max_ip; j++) {
-
     if (ips[j] == 1 || ips[j] == -1 || ips[j] == 2) {
       if (iprows >= 4) {
         displayClearDisplay();
@@ -442,7 +424,7 @@ void displayIPS() {
         iprows++;
       }
 
-      delay(500);  // Small delay to avoid overwhelming the display
+      delay(500);
       if (iprows == 4) delay(3000);
       displayDisplay();
     }
@@ -452,7 +434,6 @@ void displayIPS() {
 
 void pingNetwork(int i) {
   status = "Scanning";
-  //change this to hardcode your subnet
   IPAddress ip = IPAddress(currentIP[0], currentIP[1], currentIP[2], i);
   if (Ping.ping(ip, 1)) {
     SerialPrintLn("Alive");
@@ -460,7 +441,6 @@ void pingNetwork(int i) {
 
     iprows++;
     ipnum++;
-    //store
     ips[i] = 1;
 
     if (securityScanActive) {
@@ -471,17 +451,16 @@ void pingNetwork(int i) {
       }
     }
   } else {
-    //not found
-    if (ips[i] == -1) ips[i] = 0;       //disconnected - remove
-    else if (ips[i] == 1) ips[i] = -1;  //recently disconnected
-    else if (ips[i] == 2) ips[i] = -1;  // device disconnected, with warning
+    if (ips[i] == -1) ips[i] = 0;
+    else if (ips[i] == 1) ips[i] = -1;
+    else if (ips[i] == 2) ips[i] = -1;
     else ips[i] = 0;
   }
 }
 
 void netgotchi_face() {
   displayClearDisplay();
-  updateAndDrawStars();  // Draw the star effect
+  updateAndDrawStars();
   displayTimeAndDate();
   displaySetSize(2);
   drawnetgotchiFace(animState);
@@ -502,66 +481,32 @@ void netgotchi_face() {
 void drawnetgotchiFace(int state) {
   displaySetCursor(30 + moveX, 30);
   if (honeypotTriggered == false) {
-    if (state == 0) {
-      netgotchiCurrentFace = netgotchiFace;
-    }
-    if (state == 1) {
-      netgotchiCurrentFace = netgotchiFace2;
-    }
-
-    if (state == 2) {
-      netgotchiCurrentFace = netgotchiFaceBlink;
-    }
-
-    if (state == 3) {
-      netgotchiCurrentFace = netgotchiFaceSleep;
-    }
-    if (state == 4) {
-      netgotchiCurrentFace = netgotchiFaceSurprised;
-    }
-    if (state == 5) {
-      netgotchiCurrentFace = netgotchiFaceHappy;
-    }
+    if (state == 0) netgotchiCurrentFace = netgotchiFace;
+    if (state == 1) netgotchiCurrentFace = netgotchiFace2;
+    if (state == 2) netgotchiCurrentFace = netgotchiFaceBlink;
+    if (state == 3) netgotchiCurrentFace = netgotchiFaceSleep;
+    if (state == 4) netgotchiCurrentFace = netgotchiFaceSurprised;
+    if (state == 5) netgotchiCurrentFace = netgotchiFaceHappy;
   } else {
-    if (state == 0) {
-      netgotchiCurrentFace = netgotchiFaceSad;
-    }
-    if (state == 1) {
-      netgotchiCurrentFace = netgotchiFaceSad2;
-    }
-    if (state == 2) {
-      netgotchiCurrentFace = netgotchiFaceSuspicious;
-    }
-    if (state == 3) {
-      netgotchiCurrentFace = netgotchiFaceSuspicious2;
-    }
-    if (state == 4) {
-      netgotchiCurrentFace = netgotchiFaceHit;
-    }
-    if (state == 5) {
-      netgotchiCurrentFace = netgotchiFaceHit2;
-    }
+    if (state == 0) netgotchiCurrentFace = netgotchiFaceSad;
+    if (state == 1) netgotchiCurrentFace = netgotchiFaceSad2;
+    if (state == 2) netgotchiCurrentFace = netgotchiFaceSuspicious;
+    if (state == 3) netgotchiCurrentFace = netgotchiFaceSuspicious2;
+    if (state == 4) netgotchiCurrentFace = netgotchiFaceHit;
+    if (state == 5) netgotchiCurrentFace = netgotchiFaceHit2;
   }
   displayPrintln(netgotchiCurrentFace);
 }
 
-
 void buttonLoops() {
-  // Check if the flash button is pressed
   if (digitalRead(flashButtonPin) == LOW) {
-    // Debounce delay
     delay(50);
     if (digitalRead(flashButtonPin) == LOW) {
-      // Button is still pressed, proceed to erase EEPROM and WiFiManager settings
       displayClearDisplay();
       displayPrintln("Flash button pressed. WiFiManager settings...");
-      // Erase WiFiManager settings
       wifiManager.resetSettings();
-
       displayPrintln("EEPROM and WiFiManager settings erased.");
       displayPrintln("Restart this device");
-
-      // Optional: Add a delay to prevent multiple erases in quick succession
       delay(10000);
       ESP.restart();
     }
@@ -569,7 +514,6 @@ void buttonLoops() {
 }
 
 void headlessInfo() {
-  //slow down the print in the serial console
   if (seconds - serial_info_seconds > 1) {
     serial_info_seconds = seconds;
     SerialPrintLn(netgotchiCurrentFace + " Honeypot :" + (honeypotTriggered ? "breached" : "OK") + (" Host-Found:" + String(ipnum)) + (" Vulnerabilities:" + String(vulnerabilitiesFound)));
@@ -579,7 +523,6 @@ void headlessInfo() {
 int scanForDangerousServices(IPAddress ip) {
   WiFiClient client;
   for (int i = 0; i < sizeof(dangerousServices) / sizeof(dangerousServices[0]); ++i) {
-    //skip FTP scan if you have other netgotchi / ftp server in the network.
     if (skipFTPScan && dangerousServices[i].name == "FTP") continue;
     if (client.connect(ip, dangerousServices[i].port)) {
       Serial.print("Open port found: ");
@@ -596,13 +539,31 @@ int scanForDangerousServices(IPAddress ip) {
   return 0;
 }
 
-
 void playAlert() {
-  tone(buzzer_pin, 500);  // Send 1kHz sound signal
-  delay(500);
-  noTone(buzzer_pin);
-  delay(500);
-  tone(buzzer_pin, 500);  // Send 1kHz sound signal
-  delay(500);
-  noTone(buzzer_pin);
+  #ifdef USE_ESP8266
+    tone(buzzer_pin, 500);
+    delay(500);
+    noTone(buzzer_pin);
+    delay(500);
+    tone(buzzer_pin, 500);
+    delay(500);
+    noTone(buzzer_pin);
+  #else
+    // Play first beep
+    ledc_set_freq(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0, 500);
+    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 127);
+    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+    delay(500);
+    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
+    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+    delay(500);
+
+    // Play second beep
+    ledc_set_freq(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0, 500);
+    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 127);
+    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+    delay(500);
+    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
+    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+  #endif
 }
