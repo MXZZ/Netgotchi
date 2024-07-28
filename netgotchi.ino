@@ -14,20 +14,16 @@
   #error "This code is intended to run on ESP32 or ESP8266 platforms only."
 #endif
 
-
 #include <ESPping.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-
-
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <WiFiManager.h>  // Include the WiFiManager library
 
-const float VERSION = 1.1;
+const float VERSION = 1.2;
 
 //Oled Screen Selectors
-
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
@@ -36,7 +32,6 @@ const float VERSION = 1.1;
 #define oled_type_ssd1306 1
 #define oled_type_sh1106 0
 #define oled_type_ssd1305 0
-
 
 #if oled_type_ssd1305
   #include <Adafruit_SSD1305.h> 
@@ -78,6 +73,7 @@ bool startScan = false;
 const long intervalScan = 60000 * 4;
 const long intervalPing = 60000 * 5;
 const long intervalSound = 60000 * 2;
+const unsigned long evilTwinScanInterval = 120000; // Check every 2 minutes
 
 int seconds = 0;
 
@@ -110,6 +106,7 @@ String netgotchiInUfo1 = " <(0-0-0)> ";
 String netgotchiInUfo2 = " <(o-o-o)> ";
 String netgotchiScreenMessage = "Saving planets!";
 String netgotchiCurrentFace = "";
+String netgotchiFaceEvilTwin = "(ಠ_ಠ)";
 int animState = 0;
 int animation = 0;
 long old_seconds = 0;
@@ -149,6 +146,19 @@ Service dangerousServices[] = {
   { "HTTP", 80 },
   { "HTTPS", 443 }
 };
+
+#define MAX_NETWORKS 10
+typedef struct {
+  String ssid;
+  uint8_t encryptionType;
+  int32_t rssi;
+  uint8_t bssid[6];
+  int32_t channel;
+} NetworkInfo;
+
+NetworkInfo knownNetworks[MAX_NETWORKS];
+int numKnownNetworks = 0;
+bool evilTwinDetected = false;
 
 void displayPrintln(String line = "") { display.println(line); }
 void displaySetCursor(int x, int y) { display.setCursor(x, y); }
@@ -203,7 +213,14 @@ void setup() {
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
 
   if (useButtonToResetFlash) pinMode(flashButtonPin, INPUT_PULLUP);
-  
+
+  // Initialize known networks
+  numKnownNetworks = 1;
+  knownNetworks[0].ssid = WiFi.SSID();
+  knownNetworks[0].encryptionType = WiFi.encryptionType(WiFi.scanNetworks() - 1);
+  knownNetworks[0].rssi = WiFi.RSSI();
+  memcpy(knownNetworks[0].bssid, WiFi.BSSID(), 6);
+  knownNetworks[0].channel = WiFi.channel();
 }
 
 void loop() {
@@ -235,6 +252,30 @@ void loop() {
   if (currentMillis - previousMillisSoundAlert >= intervalSound) {
     previousMillisSoundAlert = currentMillis;
     if (sounds && honeypotTriggered) playAlert();
+  }
+
+  // Check for Evil Twin every 2 minutes
+  static unsigned long lastEvilTwinCheck = 0;
+  if (currentMillis - lastEvilTwinCheck >= evilTwinScanInterval) {
+    lastEvilTwinCheck = currentMillis;
+    
+    // Indicate scan is starting
+    SerialPrintLn("Starting Evil Twin scan...");
+    displayClearDisplay();
+    displaySetCursor(0, 0);
+    displayPrintln("Scanning for");
+    displayPrintln("Evil Twin...");
+    displayDisplay();
+    
+    bool previousEvilTwinStatus = evilTwinDetected;
+    evilTwinDetected = detectEvilTwin();
+    
+    if (evilTwinDetected && !previousEvilTwinStatus) {
+      playAlert();
+    }
+    
+    // Indicate scan is complete
+    SerialPrintLn("Evil Twin scan complete.");
   }
 
   if (startScan) {
@@ -473,20 +514,22 @@ void netgotchi_face() {
 
 void drawnetgotchiFace(int state) {
   displaySetCursor(30 + moveX, 30);
-  if (honeypotTriggered == false) {
-    if (state == 0) netgotchiCurrentFace = netgotchiFace;
-    if (state == 1) netgotchiCurrentFace = netgotchiFace2;
-    if (state == 2) netgotchiCurrentFace = netgotchiFaceBlink;
-    if (state == 3) netgotchiCurrentFace = netgotchiFaceSleep;
-    if (state == 4) netgotchiCurrentFace = netgotchiFaceSurprised;
-    if (state == 5) netgotchiCurrentFace = netgotchiFaceHappy;
-  } else {
+  if (evilTwinDetected) {
+    netgotchiCurrentFace = netgotchiFaceEvilTwin;
+  } else if (honeypotTriggered) {
     if (state == 0) netgotchiCurrentFace = netgotchiFaceSad;
     if (state == 1) netgotchiCurrentFace = netgotchiFaceSad2;
     if (state == 2) netgotchiCurrentFace = netgotchiFaceSuspicious;
     if (state == 3) netgotchiCurrentFace = netgotchiFaceSuspicious2;
     if (state == 4) netgotchiCurrentFace = netgotchiFaceHit;
     if (state == 5) netgotchiCurrentFace = netgotchiFaceHit2;
+  } else {
+    if (state == 0) netgotchiCurrentFace = netgotchiFace;
+    if (state == 1) netgotchiCurrentFace = netgotchiFace2;
+    if (state == 2) netgotchiCurrentFace = netgotchiFaceBlink;
+    if (state == 3) netgotchiCurrentFace = netgotchiFaceSleep;
+    if (state == 4) netgotchiCurrentFace = netgotchiFaceSurprised;
+    if (state == 5) netgotchiCurrentFace = netgotchiFaceHappy;
   }
   displayPrintln(netgotchiCurrentFace);
 }
@@ -509,7 +552,9 @@ void buttonLoops() {
 void headlessInfo() {
   if (seconds - serial_info_seconds > 1) {
     serial_info_seconds = seconds;
-    SerialPrintLn(netgotchiCurrentFace + " Honeypot :" + (honeypotTriggered ? "breached" : "OK") + (" Host-Found:" + String(ipnum)) + (" Vulnerabilities:" + String(vulnerabilitiesFound)));
+    SerialPrintLn(netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + 
+                  " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") +
+                  " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound));
   }
 }
 
@@ -563,4 +608,39 @@ void displayInit()
       for (;;);
     }
   }
+}
+
+bool detectEvilTwin() {
+  int numNetworks = WiFi.scanNetworks();
+  bool currentEvilTwinStatus = false;
+
+  for (int i = 0; i < numNetworks; i++) {
+    String ssid = WiFi.SSID(i);
+    uint8_t encryptionType = WiFi.encryptionType(i);
+    int32_t rssi = WiFi.RSSI(i);
+    uint8_t* bssid = WiFi.BSSID(i);
+    int32_t channel = WiFi.channel(i);
+
+    for (int j = 0; j < numKnownNetworks; j++) {
+      if (ssid == knownNetworks[j].ssid && 
+          (encryptionType != knownNetworks[j].encryptionType ||
+           memcmp(bssid, knownNetworks[j].bssid, 6) != 0 ||
+           channel != knownNetworks[j].channel)) {
+        currentEvilTwinStatus = true;
+        SerialPrintLn("Potential Evil Twin detected: " + ssid);
+        break;
+      }
+    }
+    if (currentEvilTwinStatus) break;
+  }
+
+  if (currentEvilTwinStatus != evilTwinDetected) {
+    if (currentEvilTwinStatus) {
+      SerialPrintLn("Evil Twin appeared");
+    } else {
+      SerialPrintLn("Evil Twin disappeared");
+    }
+  }
+
+  return currentEvilTwinStatus;
 }
