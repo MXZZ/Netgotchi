@@ -4,15 +4,16 @@
 
 > Netgotchi: Your network's loyal guardian! 🐾
 
-A small arduino .ino script with some great functions to detect intruders or breach in the network, it pings periodically the network and report if any new device. It also has a rudimental "Honeypot" functionality with a rudimental exposed service, once someone reach the honeypot it will trigger an alarm. Please contribute to the repository via pull requests!
+A small arduino .ino script with some great functions to detect intruders or breaches in the network, it pings periodically the network and reports if any new device. It also has a rudimental "Honeypot" functionality with a rudimental exposed service, once someone reaches the honeypot it will trigger an alarm. Please contribute to the repository via pull requests!
 
-Tested with nmap, service scan / intense scan will trigger the alert.
+Tested with Nmap, service scan / intense scan will trigger the alert.
 
 ## 🌟 Features
 
 - 🔍 Periodic network scanning
 - 🍯 Built-in "Honeypot" functionality
 - 🚨 Intrusion detection and alerting
+- 🖥️ Support for multiple OLED display types
 - 🔄 Supports both ESP8266 and ESP32
 
 ![Netgotchi Screen 1](https://github.com/MXZZ/Netgotchi/assets/3322271/cf8d7fec-7b33-4f14-9992-8cb4806633f2) ![Netgotchi Screen 2](https://github.com/MXZZ/Netgotchi/assets/3322271/68f4fe6c-9172-422b-ba39-ee901c098840)
@@ -27,7 +28,7 @@ Support the development by getting an official Netgotchi:
 ## 🛠️ Requirements
 
 - ESP8266 or ESP32
-- SSD1306 OLED display (I2C version)
+- OLED display (SSD1306, SH1106, or SSD1305)
 - USB cable
 - Optional: 3D printed case ([Community case for Wemos D1](https://www.printables.com/model/510481-terminal-for-ssd1306-096-oled-and-wemos-d1-mini))
 
@@ -37,18 +38,23 @@ Support the development by getting an official Netgotchi:
 
 ## 📚 Libraries
 
-- Modified ESP8266FtpServer (for ESP8266) or ESP32FtpServer (for ESP32)
-- Adafruit_SSD1306
+- ESP8266/ESP32 core libraries
+- Modified FTP Server library (ESP8266FtpServer or ESP32FtpServer)
+- Adafruit_GFX
+- Adafruit_SSD1306, Adafruit_SH110X, or Adafruit_SSD1305 (based on your OLED type)
 - ESPping
+- NTPClient
 - WiFiManager
 
 ## 🚀 How to Use
 
-1. Open the `.ino` file and select your board type (ESP8266 or ESP32) by commenting/uncommenting the appropriate `#define` at the top of the file.
-2. Install the required libraries via the Arduino Library Manager.
-3. Flash the code to your ESP8266 or ESP32.
-4. On first boot, Netgotchi will create a WiFi hotspot named "AutoConnectAP" for you to set up your WiFi credentials.
-5. Once connected, Netgotchi will start guarding your network!
+1. Open the `.ino` file in the Arduino IDE.
+2. Select your OLED display type by setting the appropriate flag to 1 (e.g., `#define oled_type_ssd1306 1`).
+3. Install the required libraries via the Arduino Library Manager.
+4. Select your board (ESP8266 or ESP32) in the Arduino IDE.
+5. Flash the code to your board.
+6. On the first boot, Netgotchi will create a WiFi hotspot named "AutoConnectAP" for you to set up your WiFi credentials.
+7. Once connected, Netgotchi will start guarding your network!
 
 ## 🖥️ Headless Mode (for Cyberdecks)
 
@@ -60,7 +66,7 @@ Support the development by getting an official Netgotchi:
 
 ## 🔎 Vulnerability Scanning
 
-As of v0.9, Netgotchi scans for potentially vulnerable services including:
+Netgotchi scans for potentially vulnerable services including:
 - Telnet (23)
 - FTP (21)
 - SSH (22)
@@ -74,7 +80,7 @@ Vulnerable hosts are marked with "WRNG!". This feature can be toggled with the `
 
 ## 😊 Join us on Discord
 
-Discord Server: [Join Now](https://discord.gg/qucvvgkv3B)
+Discord Server: [Join Now](https://discord.gg/qucvvgkv3B)!
 
 ## 🤝 Contributing
 
