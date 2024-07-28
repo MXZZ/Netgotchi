@@ -80,7 +80,7 @@ Vulnerable hosts are marked with "WRNG!". This feature can be toggled with the `
 
 ## 😊 Join us on Discord
 
-Discord Server: [Join Now](https://discord.gg/qucvvgkv3B)!
+Discord Server: [Join Now](https://discord.gg/hM4w8eTKrt)!
 
 ## 🤝 Contributing
 
