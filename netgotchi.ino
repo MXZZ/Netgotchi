@@ -14,20 +14,17 @@
   #error "This code is intended to run on ESP32 or ESP8266 platforms only."
 #endif
 
-
 #include <ESPping.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-
-
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <WiFiManager.h>  // Include the WiFiManager library
+#include <Button2.h>
 
-const float VERSION = 1.1;
+const float VERSION = 1.2;
 
 //Oled Screen Selectors
-
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
@@ -36,7 +33,6 @@ const float VERSION = 1.1;
 #define oled_type_ssd1306 1
 #define oled_type_sh1106 0
 #define oled_type_ssd1305 0
-
 
 #if oled_type_ssd1305
   #include <Adafruit_SSD1305.h> 
@@ -67,6 +63,7 @@ unsigned long previousMillis = 0;
 unsigned long previousMillisScan = 0;
 unsigned long previousMillisPing = 0;
 unsigned long previousMillisSoundAlert = 0;
+unsigned long previouslastEvilTwinCheck = 0;
 
 const long interval = 20000;
 int i = 0;
@@ -78,6 +75,8 @@ bool startScan = false;
 const long intervalScan = 60000 * 4;
 const long intervalPing = 60000 * 5;
 const long intervalSound = 60000 * 2;
+const long evilTwinScanInterval = 60000 * 2;
+
 
 int seconds = 0;
 
@@ -110,6 +109,7 @@ String netgotchiInUfo1 = " <(0-0-0)> ";
 String netgotchiInUfo2 = " <(o-o-o)> ";
 String netgotchiScreenMessage = "Saving planets!";
 String netgotchiCurrentFace = "";
+String netgotchiFaceEvilTwin = "(e__t)";
 int animState = 0;
 int animation = 0;
 long old_seconds = 0;
@@ -127,12 +127,15 @@ const char* password = "";
 
 bool shouldSaveConfig = false;
 bool useButtonToResetFlash = true;
+bool hasControlsButtons = false;
 bool debug = true;
 bool headless = true;
 
 bool securityScanActive = true;
 bool skipFTPScan = true;
 int vulnerabilitiesFound = 0;
+
+
 
 struct Service {
   const char* name;
@@ -150,6 +153,21 @@ Service dangerousServices[] = {
   { "HTTPS", 443 }
 };
 
+
+#define MAX_NETWORKS 10
+typedef struct {
+  String ssid;
+  uint8_t encryptionType;
+  int32_t rssi;
+  uint8_t bssid[6];
+  int32_t channel;
+} NetworkInfo;
+
+NetworkInfo knownNetworks[MAX_NETWORKS];
+int numKnownNetworks = 0;
+bool evilTwinDetected = false;
+
+//wrapper functions for display 
 void displayPrintln(String line = "") { display.println(line); }
 void displaySetCursor(int x, int y) { display.setCursor(x, y); }
 void displayPrint(String line) { display.print(line); }
@@ -165,14 +183,7 @@ void setup() {
   Serial.begin(115200);
 
   displayInit();
-  
-  displayClearDisplay();
-  displaySetSize(1);
-  displaySetTextColor(1);  //white color
-  displaySetCursor(0, 0);
-  displayPrintln("Netgotchi v." + String(VERSION));
-  displayPrintln("created by MXZZ ");
-  delay(1000);
+  netgotchiIntro();
 
   if (useWifiManager) {
     displayPrintln("TO Configure WIFI");
@@ -199,17 +210,20 @@ void setup() {
   currentIP = WiFi.localIP();
   SerialPrintLn(currentIP.toString().c_str());
   timeClient.begin();
-  initStars();
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
 
   if (useButtonToResetFlash) pinMode(flashButtonPin, INPUT_PULLUP);
-  
+
+  saveCurrentNetworkInfos();
+  initStars();
+  buttonsInit();
 }
 
 void loop() {
   unsigned long currentMillis = millis();
   seconds = currentMillis / 1000;
 
+  //display carousel
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     if (currentScreen == 0) {};
@@ -222,21 +236,35 @@ void loop() {
     currentScreen++;
   }
 
+  //ping scan 
   if (currentMillis - previousMillisScan >= intervalScan) {
     previousMillisScan = currentMillis;
     startScan = !startScan;
   }
 
+  //network integrity
   if (currentMillis - previousMillisPing >= intervalPing) {
     previousMillisPing = currentMillis;
     scanOnce = true;
   }
 
+  //sounds alert
   if (currentMillis - previousMillisSoundAlert >= intervalSound) {
     previousMillisSoundAlert = currentMillis;
     if (sounds && honeypotTriggered) playAlert();
   }
 
+  //  Evil Twin scans
+  if (currentMillis - previouslastEvilTwinCheck >= evilTwinScanInterval) {
+    previouslastEvilTwinCheck = currentMillis;
+    bool previousEvilTwinStatus = evilTwinDetected;
+    evilTwinDetected = detectEvilTwin();
+    if (evilTwinDetected && !previousEvilTwinStatus) {
+      playAlert();
+    }
+  }
+
+  //Ping Scan 
   if (startScan) {
     if (i < 256) {
       pingNetwork(i);
@@ -248,319 +276,34 @@ void loop() {
     }
   }
 
+  //honeypot Checks
   ftpHoneypotScan();
 
+  //animations loop 
   if (animation == 0) drawSpace();
   if (animation == 1) netgotchi_face();
   if (animation > 1) animation = 0;
 
+  //button loops
   if (useButtonToResetFlash) buttonLoops();
+  if (hasControlsButtons) controlsButtonLoop();
+  //headless infos
   if (headless) headlessInfo();
 
   delay(5);
+
 }
 
-void NetworkStats() {
-  displayClearDisplay();
-  displaySetCursor(0, 8);
-  if (WiFi.status() == WL_CONNECTED) networkStatus = "connected";
-  else networkStatus = "disconnected";
-  displayPrint("Network: " + networkStatus);
-  displaySetCursor(0, 16);
-
-  if (scanOnce) {
-    IPAddress ip(1, 1, 1, 1);  // ping cloudflare
-    SerialPrintLn("pinging cloudflare");
-
-    if (Ping.ping(ip, 2)) {
-      externalNetworkStatus = "Reachable";
-      displayPrintln();
-      scanOnce = false;
-      stats = "\n min: " + String(Ping.minTime()) + "ms \n avg: " + String(Ping.averageTime()) + "ms \n max: " + String(Ping.maxTime()) + "ms";
-      delay(500);
-      SerialPrintLn("ping sent");
-      SerialPrintLn(stats);
-    } else externalNetworkStatus = "Unreachable";
-  }
-  displayPrintln("Network Speed: " + stats);
-  displayPrintln("Internet: " + externalNetworkStatus);
-  displayDisplay();
-  delay(5000);
-}
-
-void ftpHoneypotScan() {
-  ftpSrv.handleFTP();
-  #if defined(ESP8266)
-    if (ftpSrv.returnHoneypotStatus()) {
-      honeypotTriggered = true;
-      delay(500);
-    }
-  #else
-    if (ftpSrv.isClientConnected()) {
-      honeypotTriggered = true;
-      delay(500);
-    }
-  #endif
-}
-
-void drawSpace() {
-  displayClearDisplay();
-  updateAndDrawStars();
-  drawUFO();
-  displayTimeAndDate();
-  displayDisplay();
-  delay(10);
-}
-
-void initStars() {
-  for (int i = 0; i < NUM_STARS; i++) {
-    stars[i][0] = random(-1000, 1000);
-    stars[i][1] = random(-1000, 1000);
-    stars[i][2] = random(1, 1000);
-  }
-}
-
-void updateAndDrawStars() {
-  for (int i = 0; i < NUM_STARS; i++) {
-    stars[i][2] -= 5;
-    if (stars[i][2] <= 0) stars[i][2] = 1000;
-
-    int x = (stars[i][0] / stars[i][2]) * 64 + SCREEN_WIDTH / 2;
-    int y = (stars[i][1] / stars[i][2]) * 32 + SCREEN_HEIGHT / 2;
-
-    if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
-      display.drawPixel(x, y, 1);
-    }
-  }
-}
-
-void drawUFO() {
-  int ufoSize = 8;
-  display.drawLine(ufoX - ufoSize, ufoY, ufoX + ufoSize, ufoY, 1);
-  display.drawLine(ufoX, ufoY - ufoSize / 2, ufoX, ufoY + ufoSize / 2, 1);
-  display.drawCircle(ufoX, ufoY, ufoSize / 2, 1);
-
-  ufoX = SCREEN_WIDTH / 2 + sin(millis() / 1000.0) * 20;
-  ufoY = SCREEN_HEIGHT / 2 + cos(millis() / 1500.0) * 10;
-}
-
-void displayTimeAndDate() {
-  timeClient.update();
-  String formattedTime = timeClient.getFormattedTime();
-  time_t epochTime = timeClient.getEpochTime();
-  struct tm* ptm = gmtime((time_t*)&epochTime);
-
-  int currentDay = ptm->tm_mday;
-  int currentMonth = ptm->tm_mon + 1;
-  int currentYear = ptm->tm_year + 1900;
-
-  displaySetSize(1);
-  displaySetTextColor(1);
-  displaySetCursor(5, 0);
-  displayPrint(formattedTime);
-  displaySetCursor(0, 8);
-  displayPrintDate("%02d/%02d/%d", currentDay, currentMonth, currentYear);
-  displaySetCursor(0, 55);
-  displayPrint("Hosts:" + String(ipnum) + " VU:" + String(vulnerabilitiesFound));
-  displaySetCursor(75, 0);
-  displayPrint("Honeypot");
-  if (honeypotTriggered) {
-    if (((seconds % 2) == 0)) {
-      displaySetCursor(80, 8);
-      displayPrint("Breached");
-      displaySetCursor(40, 16);
-
-      #if defined(ESP8266)
-        displayPrint(ftpSrv.getHoneyPotBreachIPandTime());
-      #endif
-    }
-  } else {
-    displaySetCursor(80, 8);
-    displayPrint("OK");
-  }
-
-  displaySetCursor(90, 55);
-  if (startScan)
-    displayPrint("Scan");
-  else displayPrint("Idle");
-}
-
-void displayIPS() {
-  displayClearDisplay();
-  displaySetCursor(0, 0);
-  displayPrintln("Found Hosts:");
-
-  String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
-
-  for (int j = 0; j < max_ip; j++) {
-    if (ips[j] == 1 || ips[j] == -1 || ips[j] == 2) {
-      if (iprows >= 4) {
-        displayClearDisplay();
-        displaySetCursor(5, 0);
-        displayPrintln("Hosts:" + String(ipnum));
-        iprows = 0;
-      }
-      displaySetCursor(0, 20 + (iprows)*10);
-      if (ips[j] == 1) {
-        String al = ipprefix + String(j) + " UP";
-        displayPrintln(al);
-        iprows++;
-      }
-      if (ips[j] == 2) {
-        String al = ipprefix + String(j) + " WRNG!";
-        displayPrintln(al);
-        iprows++;
-      }
-      if (ips[j] == -1) {
-        String dc = ipprefix + String(j) + " DOWN";
-        displayPrintln(dc);
-        iprows++;
-      }
-
-      delay(500);
-      if (iprows == 4) delay(3000);
-      displayDisplay();
-    }
-  }
-  if (ipnum > 0) delay(5000);
-}
-
-void pingNetwork(int i) {
-  status = "Scanning";
-  IPAddress ip = IPAddress(currentIP[0], currentIP[1], currentIP[2], i);
-  if (Ping.ping(ip, 1)) {
-    SerialPrintLn("Alive");
-    SerialPrintLn(ip.toString().c_str());
-
-    iprows++;
-    ipnum++;
-    ips[i] = 1;
-
-    if (securityScanActive) {
-      int scanresult = scanForDangerousServices(ip);
-      if (scanresult == 1) {
-        SerialPrintLn(String(scanresult));
-        ips[i] = 2;
-      }
-    }
-  } else {
-    if (ips[i] == -1) ips[i] = 0;
-    else if (ips[i] == 1) ips[i] = -1;
-    else if (ips[i] == 2) ips[i] = -1;
-    else ips[i] = 0;
-  }
-}
-
-void netgotchi_face() {
-  displayClearDisplay();
-  updateAndDrawStars();
-  displayTimeAndDate();
-  displaySetSize(2);
-  drawnetgotchiFace(animState);
-
-  if (seconds - old_seconds > 1) {
-    moveX = moveX + random(-5, 5);
-    if (moveX > 20) moveX = 5;
-    if (moveX < -20) moveX = -5;
-
-    old_seconds = seconds;
-    animState++;
-    if (animState > 5) animState = 0;
-  }
-  displayDisplay();
-  displaySetSize(1);
-}
-
-void drawnetgotchiFace(int state) {
-  displaySetCursor(30 + moveX, 30);
-  if (honeypotTriggered == false) {
-    if (state == 0) netgotchiCurrentFace = netgotchiFace;
-    if (state == 1) netgotchiCurrentFace = netgotchiFace2;
-    if (state == 2) netgotchiCurrentFace = netgotchiFaceBlink;
-    if (state == 3) netgotchiCurrentFace = netgotchiFaceSleep;
-    if (state == 4) netgotchiCurrentFace = netgotchiFaceSurprised;
-    if (state == 5) netgotchiCurrentFace = netgotchiFaceHappy;
-  } else {
-    if (state == 0) netgotchiCurrentFace = netgotchiFaceSad;
-    if (state == 1) netgotchiCurrentFace = netgotchiFaceSad2;
-    if (state == 2) netgotchiCurrentFace = netgotchiFaceSuspicious;
-    if (state == 3) netgotchiCurrentFace = netgotchiFaceSuspicious2;
-    if (state == 4) netgotchiCurrentFace = netgotchiFaceHit;
-    if (state == 5) netgotchiCurrentFace = netgotchiFaceHit2;
-  }
-  displayPrintln(netgotchiCurrentFace);
-}
-
-void buttonLoops() {
-  if (digitalRead(flashButtonPin) == LOW) {
-    delay(50);
-    if (digitalRead(flashButtonPin) == LOW) {
-      displayClearDisplay();
-      displayPrintln("Flash button pressed. WiFiManager settings...");
-      wifiManager.resetSettings();
-      displayPrintln("EEPROM and WiFiManager settings erased.");
-      displayPrintln("Restart this device");
-      delay(10000);
-      ESP.restart();
-    }
-  }
-}
 
 void headlessInfo() {
   if (seconds - serial_info_seconds > 1) {
     serial_info_seconds = seconds;
-    SerialPrintLn(netgotchiCurrentFace + " Honeypot :" + (honeypotTriggered ? "breached" : "OK") + (" Host-Found:" + String(ipnum)) + (" Vulnerabilities:" + String(vulnerabilitiesFound)));
+    SerialPrintLn(netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + 
+                  " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") +
+                  " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound));
   }
 }
 
-int scanForDangerousServices(IPAddress ip) {
-  WiFiClient client;
-  for (int i = 0; i < sizeof(dangerousServices) / sizeof(dangerousServices[0]); ++i) {
-    if (skipFTPScan && dangerousServices[i].name == "FTP") continue;
-    if (client.connect(ip, dangerousServices[i].port)) {
-      Serial.print("Open port found: ");
-      Serial.print(dangerousServices[i].name);
-      Serial.print(" (");
-      Serial.print(dangerousServices[i].port);
-      Serial.print(") on ");
-      Serial.println(ip);
-      client.stop();
-      vulnerabilitiesFound++;
-      return 1;
-    }
-  }
-  return 0;
-}
 
-void playAlert() {
-#ifdef ESP32
-   //to add a library for Tone
-#elif defined(ESP8266)
-    tone(buzzer_pin, 500);
-    delay(500);
-    noTone(buzzer_pin);
-    delay(500);
-    tone(buzzer_pin, 500);
-    delay(500);
-    noTone(buzzer_pin);
-#endif
-}
 
-void displayInit()
-{
-  //display initializer
-  if(oled_type_ssd1306){
-    if (!display.begin(2, 0x3C)) { 
-      // add "SSD1306_SWITCHCAPVCC, 0x3C" in the begin() if screen doesn't work. 
-      SerialPrintLn("SSD1306 allocation failed");
-      for (;;);
-    }
-  }
-  else
-  { 
-    if (!display.begin()) { 
-      SerialPrintLn("Display allocation failed");
-      for (;;);
-    }
-  }
-}
+
