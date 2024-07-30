@@ -1,24 +1,38 @@
 //Screens functions
 
+
+
 void displayInit()
 {
-  //display initializer
-  if(oled_type_ssd1306){
-    if (!display.begin(2, 0x3C)) { 
-      // add "SSD1306_SWITCHCAPVCC, 0x3C" in the begin() if screen doesn't work. 
-      SerialPrintLn("SSD1306 allocation failed");
-      for (;;);
+  //to skip if the board has not display 
+  if(hasDisplay)
+  {
+    //display initializer
+    if(oled_type_ssd1306){
+      if (!display.begin(2, 0x3C)) { 
+        // add "SSD1306_SWITCHCAPVCC, 0x3C" in the begin() if screen doesn't work. 
+        SerialPrintLn("SSD1306 allocation failed");
+        for (;;);
+      }
     }
-  }
-  else
-  { 
-    if (!display.begin()) { 
-      SerialPrintLn("Display allocation failed");
-      for (;;);
+    else
+    { 
+      if (!display.begin()) { 
+        SerialPrintLn("Display allocation failed");
+        for (;;);
+      }
     }
   }
 }
 
+void drawSpace() {
+  displayClearDisplay();
+  updateAndDrawStars();
+  drawUFO();
+  displayTimeAndDate();
+  displayDisplay();
+  delay(10);
+}
 
 void NetworkStats() {
   displayClearDisplay();
@@ -48,14 +62,7 @@ void NetworkStats() {
   delay(5000);
 }
 
-void drawSpace() {
-  displayClearDisplay();
-  updateAndDrawStars();
-  drawUFO();
-  displayTimeAndDate();
-  displayDisplay();
-  delay(10);
-}
+
 
 void initStars() {
   for (int i = 0; i < NUM_STARS; i++) {
@@ -74,23 +81,23 @@ void updateAndDrawStars() {
     int y = (stars[i][1] / stars[i][2]) * 32 + SCREEN_HEIGHT / 2;
 
     if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
-      display.drawPixel(x, y, 1);
+      displayDrawPixel(x, y, 1);
     }
   }
 }
 
 void drawUFO() {
   int ufoSize = 8;
-  display.drawLine(ufoX - ufoSize, ufoY, ufoX + ufoSize, ufoY, 1);
-  display.drawLine(ufoX, ufoY - ufoSize / 2, ufoX, ufoY + ufoSize / 2, 1);
-  display.drawCircle(ufoX, ufoY, ufoSize / 2, 1);
+  displayDrawLine(ufoX - ufoSize, ufoY, ufoX + ufoSize, ufoY, 1);
+  displayDrawLine(ufoX, ufoY - ufoSize / 2, ufoX, ufoY + ufoSize / 2, 1);
+  displayDrawCircle(ufoX, ufoY, ufoSize / 2, 1);
 
   ufoX = SCREEN_WIDTH / 2 + sin(millis() / 1000.0) * 20;
   ufoY = SCREEN_HEIGHT / 2 + cos(millis() / 1500.0) * 10;
 }
 
 void displayTimeAndDate() {
-  timeClient.update();
+  if(enableNetworkMode)timeClient.update();
   String formattedTime = timeClient.getFormattedTime();
   time_t epochTime = timeClient.getEpochTime();
   struct tm* ptm = gmtime((time_t*)&epochTime);
@@ -199,5 +206,5 @@ void netgotchiIntro()
   displaySetCursor(0, 0);
   displayPrintln("Netgotchi v." + String(VERSION));
   displayPrintln("created by MXZZ ");
-  delay(1000);
+  delay(500);
 }

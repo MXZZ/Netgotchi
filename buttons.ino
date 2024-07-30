@@ -47,31 +47,6 @@ void buttonLoops() {
   }
 }
 
-bool readButton(int pin, unsigned long debounceDelay = 10) {
-  static int lastButtonState = HIGH;
-  static int buttonState = HIGH;
-  static unsigned long lastDebounceTime = 0;
-
-  int reading = digitalRead(pin);
-
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
-  }
-
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    if (reading != buttonState) {
-      buttonState = reading;
-      if (buttonState == LOW) {
-        lastButtonState = reading;
-        return true;  // Button is pressed
-      }
-    }
-  }
-
-  lastButtonState = reading;
-  return false;  // Button is not pressed
-}
-
 
 void controlsButtonLoop()
 { 
@@ -87,5 +62,19 @@ void controlsButtonLoop()
 // Function to handle button press event
 void buttonPressed(Button2 &btn) {
 
-  SerialPrintLn(String(btn.getID()));
+  switch (btn.getID()){
+    case 2: 
+    break;
+    case 0:
+    break;
+    case 16:
+    break;
+    case 14:
+    break;
+    case 12:
+    break;
+    case 13:
+    animation++;
+    break;
+  }
 }

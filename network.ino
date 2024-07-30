@@ -1,5 +1,86 @@
 //Network features 
 
+void networkInit()
+{
+  
+  if (useWifiManager) {
+    displayPrintln("TO Configure WIFI");
+    displayPrintln("USE: AutoConnectAP");
+    displayDisplay();
+    } else {
+    displayPrintln("Connecting to WiFi");
+    displayDisplay();
+  }
+
+  if (useWifiManager) {
+    if (wifiManager.autoConnect("AutoConnectAP")) {
+      displayPrintln("Connection Successful");
+      displayDisplay();
+    }
+  } else {
+    WiFi.begin(ssid, password);
+  }
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    displayPrint(".");
+    displayDisplay();
+  }
+
+  currentIP = WiFi.localIP();
+  SerialPrintLn(currentIP.toString().c_str());
+  timeClient.begin();
+
+  ftpSrv.begin("admin", "admin");  // Set FTP username and password
+}
+
+void networkFunctionsLoop()
+{
+
+  //ping scan
+  if (currentMillis - previousMillisScan >= intervalScan) {
+    previousMillisScan = currentMillis;
+    startScan = !startScan;
+  }
+
+  //network integrity
+  if (currentMillis - previousMillisPing >= intervalPing) {
+    previousMillisPing = currentMillis;
+    scanOnce = true;
+  }
+
+  //sounds alert
+  if (currentMillis - previousMillisSoundAlert >= intervalSound) {
+    previousMillisSoundAlert = currentMillis;
+    if (sounds && honeypotTriggered) playAlert();
+  }
+
+  //  Evil Twin scans
+  if (currentMillis - previouslastEvilTwinCheck >= evilTwinScanInterval) {
+    previouslastEvilTwinCheck = currentMillis;
+    bool previousEvilTwinStatus = evilTwinDetected;
+    evilTwinDetected = detectEvilTwin();
+    if (evilTwinDetected && !previousEvilTwinStatus) {
+      playAlert();
+    }
+  }
+
+  //Ping Scan
+  if (startScan) {
+    if (i < 256) {
+      pingNetwork(i);
+      i++;
+    } else {
+      i = 0;
+      ipnum = 0;
+      vulnerabilitiesFound = 0;
+    }
+  }
+
+  //honeypot Checks
+  ftpHoneypotScan();
+}
 
 void pingNetwork(int i) {
   status = "Scanning";

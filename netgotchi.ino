@@ -5,13 +5,13 @@
 
 // Include necessary libraries based on the board type
 #ifdef ESP32
-  #include <WiFi.h>
-  #include <ESP32FtpServer.h> 
+#include <WiFi.h>
+#include <ESP32FtpServer.h>
 #elif defined(ESP8266)
-  #include <ESP8266WiFi.h>
-  #include <ESP8266FtpServer.h> 
+#include <ESP8266WiFi.h>
+#include <ESP8266FtpServer.h>
 #else
-  #error "This code is intended to run on ESP32 or ESP8266 platforms only."
+#error "This code is intended to run on ESP32 or ESP8266 platforms only."
 #endif
 
 #include <ESPping.h>
@@ -22,7 +22,7 @@
 #include <WiFiManager.h>  // Include the WiFiManager library
 #include <Button2.h>
 
-const float VERSION = 1.2;
+const float VERSION = 1.3;
 
 //Oled Screen Selectors
 #define SCREEN_WIDTH 128
@@ -35,14 +35,14 @@ const float VERSION = 1.2;
 #define oled_type_ssd1305 0
 
 #if oled_type_ssd1305
-  #include <Adafruit_SSD1305.h> 
-  Adafruit_SSD1305 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#include <Adafruit_SSD1305.h>
+Adafruit_SSD1305 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #elif oled_type_sh1106
-  #include <Adafruit_SH110X.h>
-  Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#include <Adafruit_SH110X.h>
+Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #elif oled_type_ssd1306
-  #include <Adafruit_SSD1306.h>
-  Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#include <Adafruit_SSD1306.h>
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
 FtpServer ftpSrv;  // Create an instance of the FTP server
@@ -79,10 +79,11 @@ const long evilTwinScanInterval = 60000 * 2;
 
 
 int seconds = 0;
+unsigned long currentMillis = 0;
+
 
 int ips[255] = {};
 
-bool pingScanDetected = false;
 unsigned long lastPingTime = 0;
 bool honeypotTriggered = false;
 bool sounds = true;
@@ -125,11 +126,13 @@ bool useWifiManager = true;
 const char* ssid = "";
 const char* password = "";
 
+bool enableNetworkMode = true;
 bool shouldSaveConfig = false;
 bool useButtonToResetFlash = true;
 bool hasControlsButtons = false;
 bool debug = true;
 bool headless = true;
+bool hasDisplay = true;
 
 bool securityScanActive = true;
 bool skipFTPScan = true;
@@ -157,27 +160,55 @@ Service dangerousServices[] = {
 #define MAX_NETWORKS 10
 typedef struct {
   String ssid;
-  uint8_t encryptionType;
-  int32_t rssi;
-  uint8_t bssid[6];
-  int32_t channel;
 } NetworkInfo;
 
 NetworkInfo knownNetworks[MAX_NETWORKS];
 int numKnownNetworks = 0;
 bool evilTwinDetected = false;
 
-//wrapper functions for display 
-void displayPrintln(String line = "") { display.println(line); }
-void displaySetCursor(int x, int y) { display.setCursor(x, y); }
-void displayPrint(String line) { display.print(line); }
-void displayClearDisplay() { display.clearDisplay(); }
-void displaySetSize(int size) { display.setTextSize(size); }
-void displaySetTextColor(int color) { display.setTextColor(color); }
-void displayPrintDate(const char* format, int day, int month, int year) { display.printf(format, day, month, year); }
-void displayDisplay() { display.display(); }
-void SerialPrintLn(String message) { if (debug) Serial.println(message); }
-void SerialPrintLn(int message) { if (debug) Serial.println(message); }
+//wrapper functions for display
+void displayPrintln(String line = "") {
+  if(hasDisplay)display.println(line);
+}
+void displaySetCursor(int x, int y) {
+  if(hasDisplay)display.setCursor(x, y);
+}
+void displayPrint(String line) {
+  if(hasDisplay)display.print(line);
+}
+void displayClearDisplay() {
+  if(hasDisplay)display.clearDisplay();
+}
+void displaySetSize(int size) {
+  if(hasDisplay)display.setTextSize(size);
+}
+void displaySetTextColor(int color) {
+  if(hasDisplay)display.setTextColor(color);
+}
+void displayPrintDate(const char* format, int day, int month, int year) {
+  if(hasDisplay)display.printf(format, day, month, year);
+}
+void displayDisplay() {
+  if(hasDisplay)display.display();
+}
+void displayDrawLine(uint16_t  x0, uint16_t  y0, uint16_t  x1, uint16_t  y1, uint16_t color)
+{
+  if(hasDisplay)display.drawLine( x0,y0,x1,y1, color);
+}
+void displayDrawCircle(uint16_t x, uint16_t y, uint16_t  radius , uint16_t color)
+{
+  if(hasDisplay)display.drawCircle(x, y, radius, color);
+}
+void displayDrawPixel(uint16_t  x, uint16_t  y, uint16_t color)
+{
+  if(hasDisplay)display.drawPixel(x, y, color);
+}
+void SerialPrintLn(String message) {
+  if (debug) Serial.println(message);
+}
+void SerialPrintLn(int message) {
+  if (debug) Serial.println(message);
+}
 
 void setup() {
   Serial.begin(115200);
@@ -185,43 +216,23 @@ void setup() {
   displayInit();
   netgotchiIntro();
 
-  if (useWifiManager) {
-    displayPrintln("TO Configure WIFI");
-    displayPrintln("USE: AutoConnectAP");
-  } else displayPrintln("Connecting to WiFi");
-
-  displayDisplay();
-
-  if (useWifiManager) {
-    if (wifiManager.autoConnect("AutoConnectAP")) {
-      displayPrintln("Connection Successful");
-      displayDisplay();
-    }
-  } else {
-    WiFi.begin(ssid, password);
+  if(enableNetworkMode) 
+  {
+    networkInit();
+    saveCurrentNetworkInfos();
   }
+  if(useButtonToResetFlash)pinMode(flashButtonPin, INPUT_PULLUP);
+  if(hasControlsButtons)buttonsInit();
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    displayPrint(".");
-    displayDisplay();
-  }
-  currentIP = WiFi.localIP();
-  SerialPrintLn(currentIP.toString().c_str());
-  timeClient.begin();
-  ftpSrv.begin("admin", "admin");  // Set FTP username and password
-
-  if (useButtonToResetFlash) pinMode(flashButtonPin, INPUT_PULLUP);
-
-  saveCurrentNetworkInfos();
   initStars();
-  buttonsInit();
 }
 
 void loop() {
-  unsigned long currentMillis = millis();
+  currentMillis = millis();
   seconds = currentMillis / 1000;
+
+  //main netgotchi network functionalities
+  if(enableNetworkMode)networkFunctionsLoop();
 
   //display carousel
   if (currentMillis - previousMillis >= interval) {
@@ -236,50 +247,7 @@ void loop() {
     currentScreen++;
   }
 
-  //ping scan 
-  if (currentMillis - previousMillisScan >= intervalScan) {
-    previousMillisScan = currentMillis;
-    startScan = !startScan;
-  }
-
-  //network integrity
-  if (currentMillis - previousMillisPing >= intervalPing) {
-    previousMillisPing = currentMillis;
-    scanOnce = true;
-  }
-
-  //sounds alert
-  if (currentMillis - previousMillisSoundAlert >= intervalSound) {
-    previousMillisSoundAlert = currentMillis;
-    if (sounds && honeypotTriggered) playAlert();
-  }
-
-  //  Evil Twin scans
-  if (currentMillis - previouslastEvilTwinCheck >= evilTwinScanInterval) {
-    previouslastEvilTwinCheck = currentMillis;
-    bool previousEvilTwinStatus = evilTwinDetected;
-    evilTwinDetected = detectEvilTwin();
-    if (evilTwinDetected && !previousEvilTwinStatus) {
-      playAlert();
-    }
-  }
-
-  //Ping Scan 
-  if (startScan) {
-    if (i < 256) {
-      pingNetwork(i);
-      i++;
-    } else {
-      i = 0;
-      ipnum = 0;
-      vulnerabilitiesFound = 0;
-    }
-  }
-
-  //honeypot Checks
-  ftpHoneypotScan();
-
-  //animations loop 
+  //animations loop
   if (animation == 0) drawSpace();
   if (animation == 1) netgotchi_face();
   if (animation > 1) animation = 0;
@@ -287,23 +255,21 @@ void loop() {
   //button loops
   if (useButtonToResetFlash) buttonLoops();
   if (hasControlsButtons) controlsButtonLoop();
+
   //headless infos
   if (headless) headlessInfo();
 
   delay(5);
-
 }
+
 
 
 void headlessInfo() {
   if (seconds - serial_info_seconds > 1) {
     serial_info_seconds = seconds;
-    SerialPrintLn(netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + 
-                  " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") +
-                  " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound));
+    SerialPrintLn(netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") + " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound));
   }
 }
-
 
 
 
