@@ -74,7 +74,6 @@ void buttonPressed(Button2 &btn) {
     case 12:
     break;
     case 13:
-    animation++;
     break;
   }
 }

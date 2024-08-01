@@ -13,19 +13,31 @@ void networkInit()
   }
 
   if (useWifiManager) {
-    if (wifiManager.autoConnect("AutoConnectAP")) {
+    wifiManager.setConfigPortalTimeout(wifiManagertimeout);
+    if(!wifiManager.autoConnect("AutoConnectAP")) {
+      // fail to connect -- timeout
+      displayPrintln("Connection Timeout");
+      displayPrintln("Restarting in 5min");
+      delay(5000);
+      scheduledRestart = true;
+      enableNetworkMode = false;
+    }
+    else
+    {
+      //connection successfull 
       displayPrintln("Connection Successful");
       displayDisplay();
     }
-  } else {
-    WiFi.begin(ssid, password);
-  }
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    displayPrint(".");
-    displayDisplay();
+  } else {
+    //use normal wifi credential 
+    WiFi.begin(ssid, password);
+      while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+      displayPrint(".");
+      displayDisplay();
+    }
   }
 
   currentIP = WiFi.localIP();

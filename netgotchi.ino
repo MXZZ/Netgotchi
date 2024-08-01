@@ -22,7 +22,7 @@
 #include <WiFiManager.h>  // Include the WiFiManager library
 #include <Button2.h>
 
-const float VERSION = 1.3;
+const float VERSION = 1.4;
 
 //Oled Screen Selectors
 #define SCREEN_WIDTH 128
@@ -123,6 +123,8 @@ const int flashButtonPin = 0;  // GPIO0 is connected to the flash button
 WiFiManager wifiManager;
 
 bool useWifiManager = true;
+int wifiManagertimeout = 360; // seconds to run for
+
 const char* ssid = "";
 const char* password = "";
 
@@ -133,11 +135,12 @@ bool hasControlsButtons = false;
 bool debug = true;
 bool headless = true;
 bool hasDisplay = true;
+bool carouselMode = true;
+bool scheduledRestart = false;
 
 bool securityScanActive = true;
 bool skipFTPScan = true;
 int vulnerabilitiesFound = 0;
-
 
 
 struct Service {
@@ -165,6 +168,7 @@ typedef struct {
 NetworkInfo knownNetworks[MAX_NETWORKS];
 int numKnownNetworks = 0;
 bool evilTwinDetected = false;
+
 
 //wrapper functions for display
 void displayPrintln(String line = "") {
@@ -203,12 +207,14 @@ void displayDrawPixel(uint16_t  x, uint16_t  y, uint16_t color)
 {
   if(hasDisplay)display.drawPixel(x, y, color);
 }
+
 void SerialPrintLn(String message) {
   if (debug) Serial.println(message);
 }
 void SerialPrintLn(int message) {
   if (debug) Serial.println(message);
 }
+
 
 void setup() {
   Serial.begin(115200);
@@ -235,7 +241,7 @@ void loop() {
   if(enableNetworkMode)networkFunctionsLoop();
 
   //display carousel
-  if (currentMillis - previousMillis >= interval) {
+  if (carouselMode && ( currentMillis - previousMillis >= interval)) {
     previousMillis = currentMillis;
     if (currentScreen == 0) {};
     if (currentScreen == 1) displayIPS();
@@ -255,6 +261,7 @@ void loop() {
   //button loops
   if (useButtonToResetFlash) buttonLoops();
   if (hasControlsButtons) controlsButtonLoop();
+  if (scheduledRestart) countdownToRestart();
 
   //headless infos
   if (headless) headlessInfo();
@@ -262,14 +269,15 @@ void loop() {
   delay(5);
 }
 
-
-
 void headlessInfo() {
   if (seconds - serial_info_seconds > 1) {
     serial_info_seconds = seconds;
     SerialPrintLn(netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") + " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound));
   }
 }
+
+
+
 
 
 

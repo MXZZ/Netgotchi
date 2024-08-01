@@ -29,7 +29,15 @@ void drawSpace() {
   displayClearDisplay();
   updateAndDrawStars();
   drawUFO();
-  displayTimeAndDate();
+  if(enableNetworkMode)
+  { 
+    displayTimeAndDate();
+    displayStats();
+  }
+  else
+  {
+    displayOfflineMode();
+  }
   displayDisplay();
   delay(10);
 }
@@ -97,11 +105,10 @@ void drawUFO() {
 }
 
 void displayTimeAndDate() {
-  if(enableNetworkMode)timeClient.update();
+  timeClient.update();
   String formattedTime = timeClient.getFormattedTime();
   time_t epochTime = timeClient.getEpochTime();
   struct tm* ptm = gmtime((time_t*)&epochTime);
-
   int currentDay = ptm->tm_mday;
   int currentMonth = ptm->tm_mon + 1;
   int currentYear = ptm->tm_year + 1900;
@@ -112,6 +119,11 @@ void displayTimeAndDate() {
   displayPrint(formattedTime);
   displaySetCursor(0, 8);
   displayPrintDate("%02d/%02d/%d", currentDay, currentMonth, currentYear);
+  
+}
+
+void displayStats()
+{
   displaySetCursor(0, 55);
   displayPrint("Hosts:" + String(ipnum) + " VU:" + String(vulnerabilitiesFound));
   displaySetCursor(75, 0);
@@ -180,7 +192,14 @@ void displayIPS() {
 void netgotchi_face() {
   displayClearDisplay();
   updateAndDrawStars();
-  displayTimeAndDate();
+
+  if(enableNetworkMode)
+  {
+    displayTimeAndDate();
+    displayStats();
+  }
+  else displayOfflineMode();
+  
   displaySetSize(2);
   drawnetgotchiFace(animState);
 
@@ -197,6 +216,12 @@ void netgotchi_face() {
   displaySetSize(1);
 }
 
+
+void displayOfflineMode()
+{
+  displaySetCursor(0, 55);
+  displayPrint("Netgotchi is Offline");
+}
 
 void netgotchiIntro()
 {
