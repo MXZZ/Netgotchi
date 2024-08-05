@@ -39,12 +39,13 @@ Support the development by getting an official Netgotchi:
 ## 📚 Libraries
 
 - ESP8266/ESP32 core libraries
-- Modified FTP Server library (ESP8266FtpServer or ESP32FtpServer)
+- Modified FTP Server library (ESP8266FtpServer or ESP32FtpServer) -- you need to install the one provided in the "/libraries" folder in this repo
 - Adafruit_GFX
 - Adafruit_SSD1306, Adafruit_SH110X, or Adafruit_SSD1305 (based on your OLED type)
 - ESPping
 - NTPClient
 - WiFiManager
+- Button2
 
 ## 🚀 How to Use
 
