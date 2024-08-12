@@ -208,13 +208,10 @@ void displayDrawPixel(uint16_t  x, uint16_t  y, uint16_t color)
   if(hasDisplay)display.drawPixel(x, y, color);
 }
 
-void SerialPrintLn(String message) {
+template <typename T>
+void SerialPrintLn(T message) {
   if (debug) Serial.println(message);
 }
-void SerialPrintLn(int message) {
-  if (debug) Serial.println(message);
-}
-
 
 void setup() {
   Serial.begin(115200);
