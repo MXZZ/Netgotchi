@@ -41,7 +41,7 @@ void networkInit()
   }
 
   currentIP = WiFi.localIP();
-  SerialPrintLn(currentIP.toString().c_str());
+  SerialPrintLn(currentIP);
   timeClient.begin();
 
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
