@@ -18,7 +18,7 @@ Tested with Nmap, service scan / intense scan will trigger the alert.
 
 ![Netgotchi Screen 1](https://github.com/MXZZ/Netgotchi/assets/3322271/cf8d7fec-7b33-4f14-9992-8cb4806633f2) ![Netgotchi Screen 2](https://github.com/MXZZ/Netgotchi/assets/3322271/68f4fe6c-9172-422b-ba39-ee901c098840)
 
-## 🛒 Get an Official Build
+## 🛒 Get an Official Build and support the development ❤ 
 
 Support the development by getting an official Netgotchi:
 - [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3)
@@ -49,8 +49,11 @@ Support the development by getting an official Netgotchi:
 
 ## 🚀 How to Use
 
-1. Open the `.ino` file in the Arduino IDE.
-2. Select your OLED display type by setting the appropriate flag to 1 (e.g., `#define oled_type_ssd1306 1`).
+1. Open the `.ino` file in the Arduino IDE, make sure you have all files open like the image below :
+   ![immagine](https://github.com/user-attachments/assets/552f5d19-d55d-4d47-9ef4-f200438421e6)
+
+2. Select your OLED display type by setting the appropriate flag to 1 (e.g., `#define oled_type_ssd1306 1`).![immagine](https://github.com/user-attachments/assets/c1fef59b-e22a-4555-94cb-8ef26b71e756)
+
 3. Install the required libraries via the Arduino Library Manager.
 4. Select your board (ESP8266 or ESP32) in the Arduino IDE.
 5. Flash the code to your board.
@@ -78,6 +81,11 @@ Netgotchi scans for potentially vulnerable services including:
 - HTTPS (443)
 
 Vulnerable hosts are marked with "WRNG!". This feature can be toggled with the `securityScanActive` flag.
+
+## 🖥️ Web Interface ( v.1.4 update)
+Visit your netgotchi ip address at the port :80 ( the IP will be visible on the screen once connected )
+![netgotchi222](https://github.com/user-attachments/assets/e5473956-e858-45dd-8c93-b7030d33723e)
+
 
 ## 😊 Join us on Discord
 
