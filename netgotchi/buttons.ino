@@ -11,18 +11,18 @@ Button2 buttonB;
 void buttonsInit()
 {
     //change your pins configurations
-    buttonA.begin(2);
-    buttonA.setID(2);
-    buttonB.begin(0);
-    buttonB.setID(0);
-    buttonLeft.begin(16);
-    buttonLeft.setID(16);
-    buttonUp.begin(14);
-    buttonUp.setID(14);
-    buttonDown.begin(12);
-    buttonDown.setID(12);
-    buttonRight.begin(13);
-    buttonRight.setID(13);
+    buttonA.begin(BTN_A);
+    buttonA.setID(BTN_A);
+    buttonB.begin(BTN_B);
+    buttonB.setID(BTN_B);
+    buttonLeft.begin(BTN_LEFT);
+    buttonLeft.setID(BTN_LEFT);
+    buttonUp.begin(BTN_UP);
+    buttonUp.setID(BTN_UP);
+    buttonDown.begin(BTN_DOWN);
+    buttonDown.setID(BTN_DOWN);
+    buttonRight.begin(BTN_RIGHT);
+    buttonRight.setID(BTN_RIGHT);
 
     buttonA.setPressedHandler(buttonPressed);
     buttonB.setPressedHandler(buttonPressed);
@@ -36,17 +36,21 @@ void buttonLoops() {
   if (digitalRead(flashButtonPin) == LOW) {
     delay(50);
     if (digitalRead(flashButtonPin) == LOW) {
-      displayClearDisplay();
-      displayPrintln("Flash button pressed. WiFiManager settings...");
-      wifiManager.resetSettings();
-      displayPrintln("EEPROM and WiFiManager settings erased.");
-      displayPrintln("Restart this device");
-      delay(10000);
-      ESP.restart();
+      resetSettings();
     }
   }
 }
 
+void resetSettings()
+{
+  displayClearDisplay();
+  displayPrintln("Flash button pressed. WiFiManager settings...");
+  wifiManager.resetSettings();
+  displayPrintln("EEPROM and WiFiManager settings erased.");
+  displayPrintln("Restart this device");
+  delay(10000);
+  ESP.restart();
+}
 
 void controlsButtonLoop()
 { 
@@ -61,19 +65,44 @@ void controlsButtonLoop()
 
 // Function to handle button press event
 void buttonPressed(Button2 &btn) {
+  //SerialPrintLn(String(btn.getID()));
+  handleButtons(btn.getID());
+}
 
-  switch (btn.getID()){
-    case 2: 
+void handleButtons(int btnID)
+{
+  switch (btnID){
+    case BTN_A: 
+    //A
+    if(settingMode)settingConfirm();
     break;
-    case 0:
+
+    case BTN_B:
+    //B
+    if(settingMode)settingCancel();
     break;
-    case 16:
+
+    case BTN_RIGHT:
+    //RIGHT
+    nextScreen();
     break;
-    case 14:
+
+    case BTN_LEFT:
+    //LEFT
     break;
-    case 12:
+
+    case BTN_UP:
+    //UP
     break;
-    case 13:
+
+    case BTN_DOWN:
+    //DOWN
+    settingMode = true;
+    if(settingMode)
+    {
+      selectedSetting++;
+      if(selectedSetting> settingLength )selectedSetting=0;
+    }
     break;
   }
 }

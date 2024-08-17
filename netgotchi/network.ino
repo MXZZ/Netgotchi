@@ -40,11 +40,54 @@ void networkInit()
     }
   }
 
+  if(webInterface)
+  { 
+    server.on("/", handleRoot);
+
+    server.on("/matrix", HTTP_GET, [](){
+      if(hasDisplay)server.send(200, "application/json", getPixelMatrix());
+      else server.send(404);
+    });
+
+    server.on("/hosts", HTTP_GET, [](){
+        server.send(200, "text/html", getHostsStats());
+    });
+
+    server.on("/headless", HTTP_GET, [](){
+        server.send(200, "text/html", headlessStatus);
+    });
+
+    server.on("/command/left", HTTP_GET, [](){
+        handleCommand("left");
+        server.send(200, "text/plain", "Left command received");
+    });
+
+    server.on("/command/right", HTTP_GET, [](){
+        handleCommand("right");
+        server.send(200, "text/plain", "Right command received");
+    });
+
+    server.on("/command/A", HTTP_GET, [](){
+        handleCommand("A");
+        server.send(200, "text/plain", "A command received");
+    });
+
+    server.on("/command/B", HTTP_GET, [](){
+        handleCommand("B");
+        server.send(200, "text/plain", "B command received");
+    });
+
+    server.begin();
+  }
+
+
+  
   currentIP = WiFi.localIP();
   SerialPrintLn(currentIP);
   timeClient.begin();
 
   ftpSrv.begin("admin", "admin");  // Set FTP username and password
+  
 }
 
 void networkFunctionsLoop()
@@ -92,6 +135,10 @@ void networkFunctionsLoop()
 
   //honeypot Checks
   ftpHoneypotScan();
+
+  // Handle webInterface requests
+  if(webInterface) server.handleClient();
+
 }
 
 void pingNetwork(int i) {
@@ -99,7 +146,7 @@ void pingNetwork(int i) {
   IPAddress ip = IPAddress(currentIP[0], currentIP[1], currentIP[2], i);
   if (Ping.ping(ip, 1)) {
     SerialPrintLn("Alive");
-    SerialPrintLn(ip.toString().c_str());
+    SerialPrintLn(ip);
 
     iprows++;
     ipnum++;
@@ -108,7 +155,6 @@ void pingNetwork(int i) {
     if (securityScanActive) {
       int scanresult = scanForDangerousServices(ip);
       if (scanresult == 1) {
-        SerialPrintLn(String(scanresult));
         ips[i] = 2;
       }
     }
@@ -151,12 +197,12 @@ int scanForDangerousServices(IPAddress ip) {
   for (int i = 0; i < sizeof(dangerousServices) / sizeof(dangerousServices[0]); ++i) {
     if (skipFTPScan && dangerousServices[i].name == "FTP") continue;
     if (client.connect(ip, dangerousServices[i].port)) {
-      Serial.print("Open port found: ");
-      Serial.print(dangerousServices[i].name);
-      Serial.print(" (");
-      Serial.print(dangerousServices[i].port);
-      Serial.print(") on ");
-      Serial.println(ip);
+      SerialPrintLn("Open port found: ");
+      SerialPrintLn(dangerousServices[i].name);
+      SerialPrintLn(" (");
+      SerialPrintLn(dangerousServices[i].port);
+      SerialPrintLn(") on ");
+      SerialPrintLn(ip);
       client.stop();
       vulnerabilitiesFound++;
       return 1;
@@ -181,6 +227,21 @@ void ftpHoneypotScan() {
   #endif
 }
 
+void handleRoot() {
+  server.send(200, "text/html", pagehtml);
+}
+
+void handleCommand(String command) {
+    if (command == "left") {
+       handleButtons(BTN_LEFT);
+    } else if (command == "right") {
+       handleButtons(BTN_RIGHT);
+    } else if (command == "A") {
+       handleButtons(BTN_A);
+    } else if (command == "B") {
+       handleButtons(BTN_A);
+    }
+}
 
 void saveCurrentNetworkInfos()
 {
@@ -188,3 +249,27 @@ void saveCurrentNetworkInfos()
   numKnownNetworks = 1;
   knownNetworks[0].ssid = WiFi.SSID();
 }
+
+
+String getHostsStats() {
+
+  String list = "<br>";
+  String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
+  for (int j = 0; j < max_ip; j++) {
+    if (ips[j] != 0) {
+
+      if (ips[j] == 1) {
+        list += ipprefix + String(j) + " UP" + "<br>";
+      }
+      if (ips[j] != 1 && ips[j] != -1) {
+        list += ipprefix + String(j) + " WRNG!" + "<br>";
+      }
+      if (ips[j] == -1) {
+        list +=  ipprefix + String(j) + " DOWN" + "<br>";
+      }
+    }
+  }
+  return list;
+}
+
+

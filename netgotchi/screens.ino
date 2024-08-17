@@ -39,7 +39,25 @@ void drawSpace() {
     displayOfflineMode();
   }
   displayDisplay();
-  delay(10);
+  delay(1);
+}
+
+void displayRippleSpace() {
+  displayClearDisplay();
+  drawRipple();
+  netgotchi_face();
+
+  if(enableNetworkMode)
+  { 
+    displayTimeAndDate();
+    displayStats();
+  }
+  else
+  {
+    displayOfflineMode();
+  }
+  displayDisplay();
+  delay(1);
 }
 
 void NetworkStats() {
@@ -67,7 +85,6 @@ void NetworkStats() {
   displayPrintln("Network Speed: " + stats);
   displayPrintln("Internet: " + externalNetworkStatus);
   displayDisplay();
-  delay(5000);
 }
 
 
@@ -102,6 +119,18 @@ void drawUFO() {
 
   ufoX = SCREEN_WIDTH / 2 + sin(millis() / 1000.0) * 20;
   ufoY = SCREEN_HEIGHT / 2 + cos(millis() / 1500.0) * 10;
+}
+
+
+int frame = 0;
+int numCircles = 10;
+int maxRadius = 70;
+void drawRipple()
+{
+  int radius = (frame  * 10) % maxRadius;
+  displayDrawCircle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, radius, 1);
+  frame++;
+  delay(100);
 }
 
 void displayTimeAndDate() {
@@ -154,42 +183,45 @@ void displayIPS() {
   displaySetCursor(0, 0);
   displayPrintln("Found Hosts:");
 
-  String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
+  if(ipnum>0) {
+    String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
 
-  for (int j = 0; j < max_ip; j++) {
-    if (ips[j] == 1 || ips[j] == -1 || ips[j] == 2) {
-      if (iprows >= 4) {
-        displayClearDisplay();
-        displaySetCursor(5, 0);
-        displayPrintln("Hosts:" + String(ipnum));
-        iprows = 0;
-      }
-      displaySetCursor(0, 20 + (iprows)*10);
-      if (ips[j] == 1) {
-        String al = ipprefix + String(j) + " UP";
-        displayPrintln(al);
-        iprows++;
-      }
-      if (ips[j] == 2) {
-        String al = ipprefix + String(j) + " WRNG!";
-        displayPrintln(al);
-        iprows++;
-      }
-      if (ips[j] == -1) {
-        String dc = ipprefix + String(j) + " DOWN";
-        displayPrintln(dc);
-        iprows++;
-      }
+    for (int j = 0; j < max_ip; j++) {
+      if (ips[j] == 1 || ips[j] == -1 || ips[j] == 2) {
+        if (iprows >= 4) {
+          displayClearDisplay();
+          displaySetCursor(5, 0);
+          displayPrintln("Hosts:" + String(ipnum));
+          iprows = 0;
+        }
+        displaySetCursor(0, 20 + (iprows)*10);
+        if (ips[j] == 1) {
+          String al = ipprefix + String(j) + " UP";
+          displayPrintln(al);
+          iprows++;
+        }
+        if (ips[j] == 2) {
+          String al = ipprefix + String(j) + " WRNG!";
+          displayPrintln(al);
+          iprows++;
+        }
+        if (ips[j] == -1) {
+          String dc = ipprefix + String(j) + " DOWN";
+          displayPrintln(dc);
+          iprows++;
+        }
 
-      delay(500);
-      if (iprows == 4) delay(3000);
-      displayDisplay();
+        delay(500);
+        if (iprows == 4) delay(1000);
+        displayDisplay();
+      }
     }
   }
-  if (ipnum > 0) delay(5000);
+  else nextScreen();
 }
 
-void netgotchi_face() {
+void displayNetgotchi()
+{
   displayClearDisplay();
   updateAndDrawStars();
 
@@ -199,6 +231,13 @@ void netgotchi_face() {
     displayStats();
   }
   else displayOfflineMode();
+
+  netgotchi_face();
+  displayDisplay();
+
+}
+
+void netgotchi_face() {
   
   displaySetSize(2);
   drawnetgotchiFace(animState);
@@ -212,7 +251,6 @@ void netgotchi_face() {
     animState++;
     if (animState > 5) animState = 0;
   }
-  displayDisplay();
   displaySetSize(1);
 }
 
@@ -232,4 +270,89 @@ void netgotchiIntro()
   displayPrintln("Netgotchi v." + String(VERSION));
   displayPrintln("created by MXZZ ");
   delay(500);
+}
+
+void displaySettings()
+{
+  displayClearDisplay();
+  displaySetCursor(0, 0);
+  displayPrintln("Settings v." + String(VERSION));
+  displaySetCursor(0, 10);
+
+  for(int i=0; i< settingLength ;i++)
+  {
+    if(selectedSetting == i)
+    displayPrintln(">"+settings[i]);
+    else
+    displayPrintln(" "+settings[i]);
+  }
+  displayDisplay();
+}
+
+void displayNetgotchiStats(){
+  displayClearDisplay();
+  displaySetCursor(0, 0);
+  displayPrintln("Netgotchi v." + String(VERSION));
+  displaySetCursor(0, 10);
+
+  displayPrintln("IP:  " + currentIP.toString() );
+  displayPrintln("Uptime:" + String(seconds)+"sec");
+  if( WiFi.status() == WL_CONNECTED)displayPrintln("SSID:" + WiFi.SSID());
+
+  
+  displayDisplay();
+}
+
+void screenAnimations()
+{
+  //animations loop on the same carousel page
+  
+  if (animation == 0) displayNetgotchi();
+  if (animation == 1) drawSpace();
+  if (animation > max_anim) animation = 0;
+}
+
+
+int getPixelAt(int x, int y) {
+    // Check if coordinates are within bounds
+    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) {
+        return -1;  // Out of bounds
+    }
+
+    // Calculate the index of the byte in the buffer
+    int byteIndex = (y / 8) * SCREEN_WIDTH + x;  // Find which byte
+    int bitIndex = y % 8;  // Find which bit within the byte
+
+    // Get the byte value from the buffer
+    uint8_t* buffer = displayGetBuffer();
+    uint8_t byteValue = buffer[byteIndex];
+  
+    // Check if the pixel is set (1 for white, 0 for black)
+    bool isWhite = (byteValue & (1 << bitIndex)) != 0;
+    return isWhite ? 1 : 0;
+}
+
+String getPixelMatrix() {
+    String matrix = "[";
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        if (y > 0) matrix += ",";
+        matrix += "[";
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
+            if (x > 0) matrix += ",";
+            matrix += getPixelAt(x, y);
+        }
+        matrix += "]";
+    }
+    matrix += "]";
+    return matrix;
+}
+
+void nextScreen(){
+  currentScreen++;
+  if (currentScreen > maxScreens) {
+    currentScreen = 0;
+    //change animation
+    animation++;
+    if(animation>max_anim)animation=0;
+  }
 }

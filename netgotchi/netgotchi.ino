@@ -7,9 +7,11 @@
 #ifdef ESP32
 #include <WiFi.h>
 #include <ESP32FtpServer.h>
+#include <WebServer.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266FtpServer.h>
+#include <ESP8266WebServer.h>
 #else
 #error "This code is intended to run on ESP32 or ESP8266 platforms only."
 #endif
@@ -34,6 +36,13 @@ const float VERSION = 1.4;
 #define oled_type_sh1106 0
 #define oled_type_ssd1305 0
 
+#define BTN_LEFT 16
+#define BTN_RIGHT 13
+#define BTN_UP 14
+#define BTN_DOWN 12
+#define BTN_A 2
+#define BTN_B 0
+
 #if oled_type_ssd1305
 #include <Adafruit_SSD1305.h>
 Adafruit_SSD1305 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -43,6 +52,12 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 #elif oled_type_ssd1306
 #include <Adafruit_SSD1306.h>
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
+
+#ifdef ESP32
+WebServer server(80);
+#elif defined(ESP8266)
+ESP8266WebServer server(80);
 #endif
 
 FtpServer ftpSrv;  // Create an instance of the FTP server
@@ -66,13 +81,17 @@ unsigned long previousMillisSoundAlert = 0;
 unsigned long previouslastEvilTwinCheck = 0;
 
 const long interval = 20000;
+//delay interval for each screen
+int screensInterval[] = { 30000, 10000, 10000, 5000, 10000, 5000 };
 int i = 0;
 int ipnum = 0;   // display counter
 int iprows = 0;  // ip rows
 int currentScreen = 0;
+int maxScreens = 5;
+
 int max_ip = 255;
 bool startScan = false;
-const long intervalScan = 60000 * 4;
+const long intervalScan = 60000 * 6;
 const long intervalPing = 60000 * 5;
 const long intervalSound = 60000 * 2;
 const long evilTwinScanInterval = 60000 * 2;
@@ -113,6 +132,7 @@ String netgotchiCurrentFace = "";
 String netgotchiFaceEvilTwin = "(e__t)";
 int animState = 0;
 int animation = 0;
+int max_anim = 1;
 long old_seconds = 0;
 long serial_info_seconds = 0;
 int moveX = 0;
@@ -123,7 +143,7 @@ const int flashButtonPin = 0;  // GPIO0 is connected to the flash button
 WiFiManager wifiManager;
 
 bool useWifiManager = true;
-int wifiManagertimeout = 360; // seconds to run for
+int wifiManagertimeout = 360;  // seconds to run for
 
 const char* ssid = "";
 const char* password = "";
@@ -137,11 +157,15 @@ bool headless = true;
 bool hasDisplay = true;
 bool carouselMode = true;
 bool scheduledRestart = false;
+bool settingMode = false;
 
 bool securityScanActive = true;
 bool skipFTPScan = true;
 int vulnerabilitiesFound = 0;
+int selectedSetting = 0;
 
+int settingLength = 6;
+String settings[] = { "Start AP", "Online Mode", "Airplane Mode", "Start WebInterface", "Stop WebInterface", "Reset Settings" };
 
 struct Service {
   const char* name;
@@ -168,50 +192,155 @@ typedef struct {
 NetworkInfo knownNetworks[MAX_NETWORKS];
 int numKnownNetworks = 0;
 bool evilTwinDetected = false;
+bool webInterface = true;
+String headlessStatus = "";
+
+static const char PROGMEM pagehtml[] = R"rawliteral( 
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Netgotchi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            display: block;
+            height: 100%;
+            margin: 0;
+            background-color: #333;
+            color:white;
+            font-family : Helvetica
+        }
+        canvas {
+            image-rendering: pixelated; /* Ensures the pixels remain sharp when scaled */
+            zoom: 2;
+            }
+        #headless{
+          background: black;
+          font-size: 30px;
+          text-wrap: balance;
+        }
+    </style>
+</head>
+<body>
+<h1> Netgotchi </h1>
+<br>
+
+<p>Headless display<p>
+<p id="headless"></p>
+
+<p>Actual Display</p>
+<canvas id="canvas" width="128" height="64"></canvas>
+
+<p>Controls<p>
+<div class="buttons">
+        <button onclick="sendCommand('left')">Left</button>
+        <button onclick="sendCommand('right')">Right</button>
+        <button onclick="sendCommand('A')">A</button>
+        <button onclick="sendCommand('B')">B</button>
+</div>
+<p>Hosts</p>
+<button onclick="getHosts()">Get Hosts Datas</button>
+<p id="hosts"></p>
+    <script>
+        function updateCanvas() {
+            fetch('/matrix')
+                .then(response => response.json())
+                .then(matrix => {
+                    const canvas = document.getElementById('canvas');
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'white';
+                    for (let y = 0; y < matrix.length; y++) {
+                        for (let x = 0; x < matrix[y].length; x++) {
+                            if (matrix[y][x] === 1) {
+                                ctx.fillRect(x, y, 1, 1);
+                            }
+                        }
+                    }
+                });
+        }
+
+        function sendCommand(command) {
+            fetch('/command/' + command)
+                .then(response => response.text())
+                .then(data => console.log(data))
+                .catch(error => console.error('Error:', error));
+        }
+
+        function getHosts() {
+            fetch('/hosts' )
+                .then(response => response.text())
+                .then(response => document.getElementById('hosts').innerHTML= response)
+                .catch(error => console.error('Error:', error));
+        }
+         function getHeadlessStatus() {
+            fetch('/headless' )
+                .then(response => response.text())
+                .then(response => document.getElementById('headless').innerHTML= response)
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Update the canvas every 2 second
+        setInterval(updateCanvas, 2000);
+
+        setInterval(getHeadlessStatus, 2000);
+
+        // Initial update
+        updateCanvas();
+    </script>
+</body></html>
+)rawliteral";
 
 
 //wrapper functions for display
 void displayPrintln(String line = "") {
-  if(hasDisplay)display.println(line);
+  if (hasDisplay) display.println(line);
 }
 void displaySetCursor(int x, int y) {
-  if(hasDisplay)display.setCursor(x, y);
+  if (hasDisplay) display.setCursor(x, y);
 }
 void displayPrint(String line) {
-  if(hasDisplay)display.print(line);
+  if (hasDisplay) display.print(line);
 }
 void displayClearDisplay() {
-  if(hasDisplay)display.clearDisplay();
+  if (hasDisplay) display.clearDisplay();
 }
 void displaySetSize(int size) {
-  if(hasDisplay)display.setTextSize(size);
+  if (hasDisplay) display.setTextSize(size);
 }
 void displaySetTextColor(int color) {
-  if(hasDisplay)display.setTextColor(color);
+  if (hasDisplay) display.setTextColor(color);
 }
 void displayPrintDate(const char* format, int day, int month, int year) {
-  if(hasDisplay)display.printf(format, day, month, year);
+  if (hasDisplay) display.printf(format, day, month, year);
 }
 void displayDisplay() {
-  if(hasDisplay)display.display();
+  if (hasDisplay) display.display();
 }
-void displayDrawLine(uint16_t  x0, uint16_t  y0, uint16_t  x1, uint16_t  y1, uint16_t color)
-{
-  if(hasDisplay)display.drawLine( x0,y0,x1,y1, color);
+void displayDrawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color) {
+  if (hasDisplay) display.drawLine(x0, y0, x1, y1, color);
 }
-void displayDrawCircle(uint16_t x, uint16_t y, uint16_t  radius , uint16_t color)
-{
-  if(hasDisplay)display.drawCircle(x, y, radius, color);
+void displayDrawCircle(uint16_t x, uint16_t y, uint16_t radius, uint16_t color) {
+  if (hasDisplay) display.drawCircle(x, y, radius, color);
 }
-void displayDrawPixel(uint16_t  x, uint16_t  y, uint16_t color)
-{
-  if(hasDisplay)display.drawPixel(x, y, color);
+void displayDrawPixel(uint16_t x, uint16_t y, uint16_t color) {
+  if (hasDisplay) display.drawPixel(x, y, color);
 }
 
-template <typename T>
-void SerialPrintLn(T message) {
+
+uint8_t* displayGetBuffer() {
+  if (hasDisplay) return display.getBuffer();
+  else return NULL;
+}
+
+void SerialPrintLn(String message) {
   if (debug) Serial.println(message);
 }
+void SerialPrintLn(int message) {
+  if (debug) Serial.println(message);
+}
+
 
 void setup() {
   Serial.begin(115200);
@@ -219,13 +348,12 @@ void setup() {
   displayInit();
   netgotchiIntro();
 
-  if(enableNetworkMode) 
-  {
+  if (enableNetworkMode) {
     networkInit();
     saveCurrentNetworkInfos();
   }
-  if(useButtonToResetFlash)pinMode(flashButtonPin, INPUT_PULLUP);
-  if(hasControlsButtons)buttonsInit();
+  if (useButtonToResetFlash) pinMode(flashButtonPin, INPUT_PULLUP);
+  if (hasControlsButtons) buttonsInit();
 
   initStars();
 }
@@ -235,25 +363,24 @@ void loop() {
   seconds = currentMillis / 1000;
 
   //main netgotchi network functionalities
-  if(enableNetworkMode)networkFunctionsLoop();
+  if (enableNetworkMode) networkFunctionsLoop();
 
-  //display carousel
-  if (carouselMode && ( currentMillis - previousMillis >= interval)) {
+  //display carousel, each screen has a different duration
+  if (!settingMode && carouselMode && (currentMillis - previousMillis >= screensInterval[currentScreen])) {
     previousMillis = currentMillis;
-    if (currentScreen == 0) {};
-    if (currentScreen == 1) displayIPS();
-    if (currentScreen == 2) NetworkStats();
-    if (currentScreen > 2) {
-      currentScreen = 0;
-      animation++;
-    }
-    currentScreen++;
+    nextScreen();
   }
 
-  //animations loop
-  if (animation == 0) drawSpace();
-  if (animation == 1) netgotchi_face();
-  if (animation > 1) animation = 0;
+  //settings
+  if (settingMode) displaySettings();
+
+  if (!settingMode) {
+    if (currentScreen == 0) screenAnimations();
+    if (currentScreen == 1) NetworkStats();
+    if (currentScreen == 2) displayIPS();
+    if (currentScreen == 3) displayNetgotchiStats();
+    if (currentScreen == 4) displayRippleSpace();
+  }
 
   //button loops
   if (useButtonToResetFlash) buttonLoops();
@@ -263,18 +390,15 @@ void loop() {
   //headless infos
   if (headless) headlessInfo();
 
-  delay(5);
+
+
+  delay(15);
 }
 
 void headlessInfo() {
   if (seconds - serial_info_seconds > 1) {
     serial_info_seconds = seconds;
-    SerialPrintLn(netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") + " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound));
+    headlessStatus = netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") + " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound);
+    SerialPrintLn(headlessStatus);
   }
 }
-
-
-
-
-
-
