@@ -24,6 +24,7 @@ Support the development by getting an official Netgotchi:
 - [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3)
 - [Amazon](https://amzn.to/4dd5yjA)
 - [Etsy](https://olleadventures.etsy.com/listing/1752764124)
+- [Tindie](https://www.tindie.com/products/ollestore/negotchi-network-security-scanner/)
 
 ## 🛠️ Requirements
 
