@@ -26,6 +26,17 @@ Support the development by getting an official Netgotchi:
 - [Etsy](https://olleadventures.etsy.com/listing/1752764124)
 - [Tindie](https://www.tindie.com/products/ollestore/negotchi-network-security-scanner/)
 
+PRO version & Prototypes 
+
+
+![IMG_20240829_1519522](https://github.com/user-attachments/assets/b584b5f6-9727-46fc-9bce-9cad7c8529e4)
+
+Netgotchi Pro version :
+Pro version has a keypad to access the settings from the device itself without re-flashing settings and a small buzzer for sound alerts!
+- [Netgotchi PRO on Tindie](https://www.tindie.com/products/35655/)
+- [Netgotchi PRO on Etsy](https://olleadventures.etsy.com/listing/1771783598)
+  
+
 ## 🛠️ Requirements
 
 - ESP8266 or ESP32
