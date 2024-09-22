@@ -1,7 +1,5 @@
 //Buttons functions
 
-Button2 buttonUp;
-Button2 buttonDown;
 Button2 buttonLeft;
 Button2 buttonRight;
 Button2 buttonA;
@@ -17,10 +15,6 @@ void buttonsInit()
     buttonB.setID(BTN_B);
     buttonLeft.begin(BTN_LEFT);
     buttonLeft.setID(BTN_LEFT);
-    buttonUp.begin(BTN_UP);
-    buttonUp.setID(BTN_UP);
-    buttonDown.begin(BTN_DOWN);
-    buttonDown.setID(BTN_DOWN);
     buttonRight.begin(BTN_RIGHT);
     buttonRight.setID(BTN_RIGHT);
 
@@ -28,8 +22,6 @@ void buttonsInit()
     buttonB.setPressedHandler(buttonPressed);
     buttonLeft.setPressedHandler(buttonPressed);
     buttonRight.setPressedHandler(buttonPressed);
-    buttonUp.setPressedHandler(buttonPressed);
-    buttonDown.setPressedHandler(buttonPressed);
 }
 
 void buttonLoops() {
@@ -56,8 +48,6 @@ void controlsButtonLoop()
 { 
   buttonA.loop();
   buttonB.loop();
-  buttonUp.loop();
-  buttonDown.loop();
   buttonLeft.loop();
   buttonRight.loop();
 }
@@ -82,20 +72,12 @@ void handleButtons(int btnID)
     if(settingMode)settingCancel();
     break;
 
-    case BTN_RIGHT:
+    case BTN_LEFT:
     //RIGHT
     nextScreen();
     break;
 
-    case BTN_LEFT:
-    //LEFT
-    break;
-
-    case BTN_UP:
-    //UP
-    break;
-
-    case BTN_DOWN:
+    case BTN_RIGHT:
     //DOWN
     settingMode = true;
     if(settingMode)

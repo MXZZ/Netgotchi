@@ -24,7 +24,7 @@
 #include <WiFiManager.h>  // Include the WiFiManager library
 #include <Button2.h>
 
-const float VERSION = 1.4;
+const float VERSION = 1.5;
 
 //Oled Screen Selectors
 #define SCREEN_WIDTH 128
@@ -36,12 +36,13 @@ const float VERSION = 1.4;
 #define oled_type_sh1106 0
 #define oled_type_ssd1305 0
 
-#define BTN_LEFT 16
 #define BTN_RIGHT 13
-#define BTN_UP 14
-#define BTN_DOWN 12
+#define BTN_LEFT 14
 #define BTN_A 2
 #define BTN_B 0
+#define BUZZER_PIN 13
+//#define BUZZER_PIN 15 //for netgotchi pro
+#define EXT_PIN_16 16  // D0 on pro
 
 #if oled_type_ssd1305
 #include <Adafruit_SSD1305.h>
@@ -106,7 +107,6 @@ int ips[255] = {};
 unsigned long lastPingTime = 0;
 bool honeypotTriggered = false;
 bool sounds = true;
-int buzzer_pin = 13;
 
 String externalNetworkStatus = "";
 String networkStatus = "";
@@ -150,8 +150,8 @@ const char* password = "";
 
 bool enableNetworkMode = true;
 bool shouldSaveConfig = false;
-bool useButtonToResetFlash = true;
-bool hasControlsButtons = false;
+bool useButtonToResetFlash = true;//false for netgotchi pro 
+bool hasControlsButtons = false; //true for netgotchi pro 
 bool debug = true;
 bool headless = true;
 bool hasDisplay = true;
@@ -237,6 +237,8 @@ static const char PROGMEM pagehtml[] = R"rawliteral(
         <button onclick="sendCommand('right')">Right</button>
         <button onclick="sendCommand('A')">A</button>
         <button onclick="sendCommand('B')">B</button>
+        <button onclick="sendCommand('ON')">PIN ON</button>
+        <button onclick="sendCommand('OFF')">PIN OFF</button>
 </div>
 <p>Hosts</p>
 <button onclick="getHosts()">Get Hosts Datas</button>
@@ -402,3 +404,5 @@ void headlessInfo() {
     SerialPrintLn(headlessStatus);
   }
 }
+
+

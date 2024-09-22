@@ -76,6 +76,14 @@ void networkInit()
         handleCommand("B");
         server.send(200, "text/plain", "B command received");
     });
+    server.on("/command/ON", HTTP_GET, [](){
+        raisePinVoltage();
+        server.send(200, "text/plain", "ON command received");
+    });
+    server.on("/command/OFF", HTTP_GET, [](){
+        lowerPinVoltage();
+        server.send(200, "text/plain", "ON command received");
+    });
 
     server.begin();
   }
@@ -271,5 +279,7 @@ String getHostsStats() {
   }
   return list;
 }
+
+
 
 
