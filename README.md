@@ -102,7 +102,7 @@ Visit your netgotchi ip address at the port :80 ( the IP will be visible on the 
 - Connect your ESP8266 or ESP32 or Netgotchi via USB cable ( Data cable)
 - Use Chrome to go https://espressif.github.io/esptool-js/ 
 - Press "Connect" 
-- Press "Add File" , select Netgotchi.ino.bin 
+- Press "Add File" , select Netgotchi.ino.bin ( Find it in "Release")
 - Press "Flash" 
 - Restart your Netgotchi , Enjoy!
 
