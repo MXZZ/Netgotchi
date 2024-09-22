@@ -98,7 +98,15 @@ Vulnerable hosts are marked with "WRNG!". This feature can be toggled with the `
 Visit your netgotchi ip address at the port :80 ( the IP will be visible on the screen once connected )
 ![netgotchi222](https://github.com/user-attachments/assets/e5473956-e858-45dd-8c93-b7030d33723e)
 
+## How to flash ( webmode - easy mode ) 
+- Connect your ESP8266 or ESP32 or Netgotchi via USB cable ( Data cable)
+- Use Chrome to go https://espressif.github.io/esptool-js/ 
+- Press "Connect" 
+- Press "Add File" , select Netgotchi.ino.bin 
+- Press "Flash" 
+- Restart your Netgotchi , Enjoy!
 
+ 
 ## 😊 Join us on Discord
 
 Discord Server: [Join Now](https://discord.gg/hM4w8eTKrt)!
