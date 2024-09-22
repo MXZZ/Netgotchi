@@ -45,8 +45,11 @@ Pro version has a keypad to access the settings from the device itself without r
 - Optional: 3D printed case ([Community case for Wemos D1](https://www.printables.com/model/510481-terminal-for-ssd1306-096-oled-and-wemos-d1-mini))
 
 ## 📊 Wiring Diagram
-
+ESP8266
 ![Netgotchi Diagram](https://github.com/MXZZ/Netgotchi/assets/3322271/54fb9be5-4fe4-4ff3-b24a-f2a05287d893)
+ESP32
+![esp32](https://github.com/user-attachments/assets/cc486dfd-fdb6-468b-a158-2e0a78891ac4)
+
 
 ## 📚 Libraries
 
