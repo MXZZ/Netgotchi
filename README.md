@@ -20,11 +20,14 @@ Tested with Nmap, service scan / intense scan will trigger the alert.
 
 ## 🛒 Get an Official Build and support the development ❤ 
 
-Support the development by getting an official Netgotchi:
+Support the development by getting an official Netgotchi build:
+
+- [Tindie](https://www.tindie.com/products/ollestore/negotchi-network-security-scanner/)
+- [Etsy](https://olleadventures.etsy.com/listing/1752764124)
 - [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3)
 - [Amazon](https://amzn.to/4dd5yjA)
-- [Etsy](https://olleadventures.etsy.com/listing/1752764124)
-- [Tindie](https://www.tindie.com/products/ollestore/negotchi-network-security-scanner/)
+
+### Note : for security purpose make sure you buying from from official the link above, you will receive the latest version of this repository, without any modification.  
 
 PRO version & Prototypes 
 
