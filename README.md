@@ -40,6 +40,7 @@ Pro version has a keypad to access the settings from the device itself without r
 - [Netgotchi PRO on Etsy](https://olleadventures.etsy.com/listing/1771783598)
 - [Netgotchi PRO on Amazon](https://amzn.to/4gfUogy) 
 
+
 ## 🛠️ Requirements
 
 - ESP8266 or ESP32
@@ -77,6 +78,11 @@ ESP32
 5. Flash the code to your board.
 6. On the first boot, Netgotchi will create a WiFi hotspot named "AutoConnectAP" for you to set up your WiFi credentials.
 7. Once connected, Netgotchi will start guarding your network!
+
+Netgotchi Pro configuration :
+ 
+![immagine](https://github.com/user-attachments/assets/8470aba4-9c47-469d-80bb-6da349b01436)
+
 
 ## 🖥️ Headless Mode (for Cyberdecks)
 
