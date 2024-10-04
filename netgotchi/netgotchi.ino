@@ -31,17 +31,18 @@ const float VERSION = 1.5;
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 
-//select to 1 which oled driver you have , default is ssd1306
+//select to 1 which oled driver you have , default is ssd1306 , ssh1106 for netgotchi pro 
 #define oled_type_ssd1306 1
 #define oled_type_sh1106 0
 #define oled_type_ssd1305 0
 
 #define BTN_RIGHT 13
-#define BTN_LEFT 14
+#define BTN_LEFT 12 
 #define BTN_A 2
 #define BTN_B 0
-#define BUZZER_PIN 13
 //#define BUZZER_PIN 15 //for netgotchi pro
+//#define BUZZER_PIN 13 //for netgotchis v2
+#define BUZZER_PIN 13
 #define EXT_PIN_16 16  // D0 on pro
 
 #if oled_type_ssd1305

@@ -9,6 +9,8 @@ void displayInit()
   {
     //display initializer
     if(oled_type_ssd1306){
+      // spefify your pins if needed 
+      // Wire.begin(D5, D6);
       if (!display.begin(2, 0x3C)) { 
         // add "SSD1306_SWITCHCAPVCC, 0x3C" in the begin() if screen doesn't work. 
         SerialPrintLn("SSD1306 allocation failed");
