@@ -35,7 +35,7 @@ PRO version & Prototypes
 ![IMG_20240829_1519522](https://github.com/user-attachments/assets/b584b5f6-9727-46fc-9bce-9cad7c8529e4)
 
 Netgotchi Pro version :
-Pro version has a keypad to access the settings from the device itself without re-flashing settings and a small buzzer for sound alerts!
+Pro version has a keypad to access the settings, change mode like chat-device ( TEXTgotchi )  or gpio remote controller ( CTRLgotchi ) , from the device itself without re-flashing settings and a small buzzer for sound alerts!
 - [Netgotchi PRO on Tindie](https://www.tindie.com/products/35655/)
 - [Netgotchi PRO on Etsy](https://olleadventures.etsy.com/listing/1771783598)
 - [Netgotchi PRO on Amazon](https://amzn.to/4gfUogy) 
