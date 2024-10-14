@@ -6,22 +6,21 @@ Button2 buttonA;
 Button2 buttonB;
 
 
-void buttonsInit()
-{
-    //change your pins configurations
-    buttonA.begin(BTN_A);
-    buttonA.setID(BTN_A);
-    buttonB.begin(BTN_B);
-    buttonB.setID(BTN_B);
-    buttonLeft.begin(BTN_LEFT);
-    buttonLeft.setID(BTN_LEFT);
-    buttonRight.begin(BTN_RIGHT);
-    buttonRight.setID(BTN_RIGHT);
+void buttonsInit() {
+  //change your pins configurations
+  buttonA.begin(BTN_A);
+  buttonA.setID(BTN_A);
+  buttonB.begin(BTN_B);
+  buttonB.setID(BTN_B);
+  buttonLeft.begin(BTN_LEFT);
+  buttonLeft.setID(BTN_LEFT);
+  buttonRight.begin(BTN_RIGHT);
+  buttonRight.setID(BTN_RIGHT);
 
-    buttonA.setPressedHandler(buttonPressed);
-    buttonB.setPressedHandler(buttonPressed);
-    buttonLeft.setPressedHandler(buttonPressed);
-    buttonRight.setPressedHandler(buttonPressed);
+  buttonA.setPressedHandler(buttonPressed);
+  buttonB.setPressedHandler(buttonPressed);
+  buttonLeft.setPressedHandler(buttonPressed);
+  buttonRight.setPressedHandler(buttonPressed);
 }
 
 void buttonLoops() {
@@ -33,8 +32,17 @@ void buttonLoops() {
   }
 }
 
-void resetSettings()
-{
+void checkOfflineMode() {
+
+  if (digitalRead(BTN_A) == LOW) {
+    delay(50);
+    if (digitalRead(BTN_A) == LOW) {
+      enableNetworkMode = false;
+    }
+  }
+}
+
+void resetSettings() {
   displayClearDisplay();
   displayPrintln("Flash button pressed. WiFiManager settings...");
   wifiManager.resetSettings();
@@ -44,8 +52,7 @@ void resetSettings()
   ESP.restart();
 }
 
-void controlsButtonLoop()
-{ 
+void controlsButtonLoop() {
   buttonA.loop();
   buttonB.loop();
   buttonLeft.loop();
@@ -59,32 +66,30 @@ void buttonPressed(Button2 &btn) {
   handleButtons(btn.getID());
 }
 
-void handleButtons(int btnID)
-{
-  switch (btnID){
-    case BTN_A: 
-    //A
-    if(settingMode)settingConfirm();
-    break;
+void handleButtons(int btnID) {
+  switch (btnID) {
+    case BTN_A:
+      //A
+      if (settingMode) settingConfirm();
+      break;
 
     case BTN_B:
-    //B
-    if(settingMode)settingCancel();
-    break;
+      //B
+      if (settingMode) settingCancel();
+      break;
 
     case BTN_LEFT:
-    //RIGHT
-    nextScreen();
-    break;
+      //RIGHT
+      nextScreen();
+      break;
 
     case BTN_RIGHT:
-    //DOWN
-    settingMode = true;
-    if(settingMode)
-    {
-      selectedSetting++;
-      if(selectedSetting> settingLength )selectedSetting=0;
-    }
-    break;
+      //DOWN
+      settingMode = true;
+      if (settingMode) {
+        selectedSetting++;
+        if (selectedSetting > settingLength) selectedSetting = 0;
+      }
+      break;
   }
 }

@@ -19,7 +19,7 @@ void settingConfirm()
   }
   if(selectedSetting == 4)
   {
-    //webinterface code -- stop
+    ESP.restart();
   }
   if(selectedSetting == 5)
   {

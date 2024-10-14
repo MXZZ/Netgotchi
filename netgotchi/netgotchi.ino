@@ -24,7 +24,7 @@
 #include <WiFiManager.h>  // Include the WiFiManager library
 #include <Button2.h>
 
-const float VERSION = 1.5;
+const float VERSION = 1.62;
 
 //Oled Screen Selectors
 #define SCREEN_WIDTH 128
@@ -159,6 +159,7 @@ bool hasDisplay = true;
 bool carouselMode = true;
 bool scheduledRestart = false;
 bool settingMode = false;
+bool skipLoader=true;
 
 bool securityScanActive = true;
 bool skipFTPScan = true;
@@ -166,15 +167,18 @@ int vulnerabilitiesFound = 0;
 int selectedSetting = 0;
 
 int settingLength = 6;
-String settings[] = { "Start AP", "Online Mode", "Airplane Mode", "Start WebInterface", "Stop WebInterface", "Reset Settings" };
+String settings[] = { "Start AP", "Online Mode", "Airplane Mode", "Start WebInterface", "Restart", "Reset Settings" };
 
 struct Service {
   const char* name;
   uint16_t port;
 };
 
+
+
+
 Service dangerousServices[] = {
-  { "Telnet", 23 },
+ { "Telnet", 23 },
   { "FTP", 21 },
   { "SSH", 22 },
   { "VNC", 5900 },
@@ -195,6 +199,15 @@ int numKnownNetworks = 0;
 bool evilTwinDetected = false;
 bool webInterface = true;
 String headlessStatus = "";
+
+
+// Broadcast MAC address
+uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
+typedef struct struct_message {
+  char text[250];
+} struct_message;
+
 
 static const char PROGMEM pagehtml[] = R"rawliteral( 
 <!DOCTYPE html>
@@ -347,8 +360,28 @@ void SerialPrintLn(int message) {
 
 void setup() {
   Serial.begin(115200);
-
   displayInit();
+  loaderSetup();
+}
+
+void loop() {
+  loader();
+}
+
+void headlessInfo() {
+  if (seconds - serial_info_seconds > 1) {
+    serial_info_seconds = seconds;
+    headlessStatus = netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") + " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound);
+    SerialPrintLn(headlessStatus);
+  }
+}
+
+
+void netgotchi_setup()
+{
+  
+  displayInit();
+  if(hasControlsButtons)checkOfflineMode();
   netgotchiIntro();
 
   if (enableNetworkMode) {
@@ -361,8 +394,9 @@ void setup() {
   initStars();
 }
 
-void loop() {
-  currentMillis = millis();
+void netgotchi_loop()
+{
+   currentMillis = millis();
   seconds = currentMillis / 1000;
 
   //main netgotchi network functionalities
@@ -392,18 +426,5 @@ void loop() {
 
   //headless infos
   if (headless) headlessInfo();
-
-
-
   delay(15);
 }
-
-void headlessInfo() {
-  if (seconds - serial_info_seconds > 1) {
-    serial_info_seconds = seconds;
-    headlessStatus = netgotchiCurrentFace + " Honeypot:" + (honeypotTriggered ? "breached" : "OK") + " EvilTwin:" + (evilTwinDetected ? "detected" : "OK") + " Host-Found:" + String(ipnum) + " Vulnerabilities:" + String(vulnerabilitiesFound);
-    SerialPrintLn(headlessStatus);
-  }
-}
-
-

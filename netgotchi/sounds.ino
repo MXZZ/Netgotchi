@@ -14,3 +14,7 @@ void playAlert() {
     noTone(BUZZER_PIN);
 #endif
 }
+
+void playTone() {
+   tone(BUZZER_PIN,1000 ,100 ); // Play a tone at frequency of1000 Hz for200 ms 
+}
