@@ -117,6 +117,8 @@ Visit your netgotchi ip address at the port :80 ( the IP will be visible on the 
 - Press "Add File" , select Netgotchi.ino.bin ( Find it in "Release")
 - Press "Flash" 
 - Restart your Netgotchi , Enjoy!
+- example on esp8266: ![immagine](https://github.com/user-attachments/assets/51d1c45c-c422-4309-88b7-64186d67d0df)
+
 
  
 ## 😊 Join us on Discord
