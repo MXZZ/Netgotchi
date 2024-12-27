@@ -36,6 +36,9 @@ const float VERSION = 1.62;
 #define oled_type_sh1106 0
 #define oled_type_ssd1305 0
 
+//For the cheap aliexpress boards with embedded OLED
+#define NodeMCU_Oled 1 //set oled type to ssd1306
+
 #define BTN_RIGHT 13
 #define BTN_LEFT 12 
 #define BTN_A 2
@@ -360,6 +363,7 @@ void SerialPrintLn(int message) {
 
 void setup() {
   Serial.begin(115200);
+  if (NodeMCU_Oled) Wire.begin(14, 12);
   displayInit();
   loaderSetup();
 }
