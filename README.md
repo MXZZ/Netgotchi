@@ -119,7 +119,28 @@ Visit your netgotchi ip address at the port :80 ( the IP will be visible on the 
 - Restart your Netgotchi , Enjoy!
 - example on esp8266: ![immagine](https://github.com/user-attachments/assets/51d1c45c-c422-4309-88b7-64186d67d0df)
 
+## Status and animations explained 
 
+- 1st Page  
+top left corner : date and time  
+top right corner : honeypot status ("ok" or if there is an attack it will appear as "breached")  
+botton left corner : how many devices are active in the wifi network  
+bottom center : number of VU ( vulnerabilities ) found  
+bottom right corner : status - idle /scan  
+center : netgotchi face and animations, the netgotchi will start crying ( T_T ) if there was an attack and it will display the attacker ip address. Netgotchi will display an "evil twin face" if someone cloned your wifi for an evil attack "( e_t )".  
+
+- 2nd Page : 
+active devices - UP for recently active, DOWN recently disconnected , WNR warning if they have a vulnerability
+
+- 3rd Page : 
+Network speed and network integrity ( ping, average speed, connection status )
+
+- 4th Page :
+Netgotchi IP and uptime 
+
+- Extra:
+Pro only : move page and setting menu on left button / right button  
+V2 and Pro only : audio alarm on attack  
  
 ## 😊 Join us on Discord
 
