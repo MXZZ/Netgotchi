@@ -29,13 +29,19 @@ void loaderSetup()
 }
 
 void rightButtonPressed(Button2 &btn) {
+  if(hasControlsButtons)
+  {
     selectedMode++;
     if(selectedMode>=availableModeLength)selectedMode=0;
+  }
 }
 
 void leftButtonPressed(Button2 &btn) {
+  if(hasControlsButtons)
+  {
     selectedMode--;
     if(selectedMode < 0)selectedMode=availableModeLength-1;
+  }
 }
 
 void AButtonPressed(Button2 &btn) {

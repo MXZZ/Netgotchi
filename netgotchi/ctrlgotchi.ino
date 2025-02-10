@@ -1,8 +1,8 @@
 #include <espnow.h>
 
-String command[] = {"< ESPNOW RECEIVER >","< ESPNOW SENDER >", "< ON >", "< OFF >" , "< TIME 1min >", "< TIME 15min >", "< TIME 1h >", "< TIME 8h >", };
+String command[] = {"< ESPNOW RECEIVER >","< ESPNOW SENDER >", "< ON >", "< OFF >" , "< TIMER 1min >", "< TIMER 15min >", "< TIMER 1h >", "< TIMER 8h >"," < ALERT REPEAT 1h>"," < ALERT REPEAT 30m>","< ALERT REPEAT 1m>" };
 String ctrlmessage = "";
-int commandLength=7;
+int commandLength=11;
 int ctrlselectedMode = 0;
 
 String ctrlface = "(éwè)";
@@ -11,6 +11,8 @@ const long ctrlinterval = 3000;  // timer at which to change the face
 String ctrlstatus = "__";
 bool remote_controlled_status=false;
 unsigned long previousMillisctrl = 0;
+unsigned long currentMillisAlert=0;
+unsigned long previousMillisctrlAlert = 0;
 bool ctrltimerstarted=false;
 
 struct_message ctrlmyData;
@@ -21,6 +23,7 @@ Button2 ctrlloaderButtonA;
 Button2 ctrlloaderButtonB;
 
 long ctrltimer = 0;
+long ctrltimerAlert = 3600000; //1h timer for repeating alert
 
 void ctrlLeftButtonPressed(Button2 &btn) {
    ctrlselectedMode--;
@@ -70,6 +73,18 @@ void ctrlAButtonPressed(Button2 &btn) {
     {
       ctrltimer=8*60 *60 * 1000;
     }
+    if(ctrlselectedMode == 8)
+    {
+      ctrltimerAlert=3600000;
+    }
+    if(ctrlselectedMode == 9)
+    {
+      ctrltimerAlert=1800000;
+    }
+    if(ctrlselectedMode == 10)
+    {
+      ctrltimerAlert=60000;
+    }
 }
 void ctrlBButtonPressed(Button2 &btn) {
   playTone();
@@ -81,7 +96,7 @@ void ctrlgotchi_setup()
 {
   WiFi.mode(WIFI_STA);
 
-  if (esp_now_init() != ERR_OK) {
+  if (esp_now_init() != 0) {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
@@ -140,6 +155,16 @@ void ctrlgotchi_loop()
     ctrlstatus="LWR";
 
   }
+
+  if(ctrlselectedMode == 8)
+    {
+        //repeating message
+        currentMillisAlert = millis();
+        if (currentMillisAlert - previousMillisctrlAlert >= ctrltimerAlert) {
+        crtlgotchi_sendMessage("CTRL:ALERT");
+        previousMillisctrlAlert= currentMillisAlert;
+      }
+    }
 }
 
 void crtlgotchi_loopFace() {
@@ -237,6 +262,10 @@ void crtlgotchi_updateDisplay() {
     if(ctrlselectedMode == 7)
     {
       display.println("D0 timer - 8h");
+    }
+    if(ctrlselectedMode == 8)
+    {
+      display.println("ALERT each hour");
     }
   
   display.display();

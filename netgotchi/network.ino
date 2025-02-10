@@ -82,7 +82,17 @@ void networkInit()
     });
     server.on("/command/OFF", HTTP_GET, [](){
         lowerPinVoltage();
-        server.send(200, "text/plain", "ON command received");
+        server.send(200, "text/plain", "OFF command received");
+    });
+    server.on("/command/TIMEPLUS", HTTP_GET, [](){
+        timeOffset+=3600;
+        timeClient.setTimeOffset(timeOffset);
+        server.send(200, "text/plain", "Hour+ command received");
+    });
+    server.on("/command/TIMEMINUS", HTTP_GET, [](){
+        timeOffset-=3600;
+        timeClient.setTimeOffset(timeOffset);
+        server.send(200, "text/plain", "Hour- command received");
     });
 
     server.begin();

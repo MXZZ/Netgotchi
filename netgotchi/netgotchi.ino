@@ -24,7 +24,7 @@
 #include <WiFiManager.h>  // Include the WiFiManager library
 #include <Button2.h>
 
-const float VERSION = 1.62;
+const float VERSION = 1.63;
 
 //Oled Screen Selectors
 #define SCREEN_WIDTH 128
@@ -44,8 +44,7 @@ const float VERSION = 1.62;
 #define BTN_A 2
 #define BTN_B 0
 //#define BUZZER_PIN 15 //for netgotchi pro
-//#define BUZZER_PIN 13 //for netgotchis v2
-#define BUZZER_PIN 13
+#define BUZZER_PIN 13 //for netgotchis v2
 #define EXT_PIN_16 16  // D0 on pro
 
 #if oled_type_ssd1305
@@ -156,14 +155,13 @@ bool enableNetworkMode = true;
 bool shouldSaveConfig = false;
 bool useButtonToResetFlash = true;//false for netgotchi pro 
 bool hasControlsButtons = false; //true for netgotchi pro 
+bool skipLoader=true; //false for netgotchi pro
 bool debug = true;
 bool headless = true;
 bool hasDisplay = true;
 bool carouselMode = true;
 bool scheduledRestart = false;
 bool settingMode = false;
-bool skipLoader=true;
-
 bool securityScanActive = true;
 bool skipFTPScan = true;
 int vulnerabilitiesFound = 0;
@@ -254,8 +252,12 @@ static const char PROGMEM pagehtml[] = R"rawliteral(
         <button onclick="sendCommand('right')">Right</button>
         <button onclick="sendCommand('A')">A</button>
         <button onclick="sendCommand('B')">B</button>
+        <br>
         <button onclick="sendCommand('ON')">PIN ON</button>
         <button onclick="sendCommand('OFF')">PIN OFF</button>
+        <br>
+        <button onclick="sendCommand('TIMEPLUS')">TIME+</button>
+        <button onclick="sendCommand('TIMEMINUS')">TIME-</button>
 </div>
 <p>Hosts</p>
 <button onclick="getHosts()">Get Hosts Datas</button>

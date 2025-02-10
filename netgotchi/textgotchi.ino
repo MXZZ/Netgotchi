@@ -8,6 +8,8 @@ String face = "(=*w*=)";
 unsigned long textgotchipreviousMillis = 0;
 const long textgotchinterval = 3000;  // textgotchinterval at which to change the face
 String textgotchistatus = "__";
+unsigned long previousMessageRecTime = 0;
+
 
 struct_message myData;
 
@@ -39,7 +41,7 @@ void textgotchi_setup()
 {
   WiFi.mode(WIFI_STA);
 
-  if (esp_now_init() != ERR_OK) {
+  if (esp_now_init() != 0) {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
@@ -118,6 +120,7 @@ void OnDataRecv(uint8_t *mac, uint8_t *incomingData, uint8_t len) {
   memcpy(&myData, incomingData, sizeof(myData));
   textreceivedMessage = String(myData.text);
   Serial.println("Serial message received: " + textreceivedMessage);
+  previousMessageRecTime = millis(); // time of last recv message
   playTone();  // Play tone when a new message is received
 }
 
@@ -132,6 +135,9 @@ void updateDisplay() {
   display.println(textreceivedMessage);
   display.print("Sent: ");
   display.println(textmessage);
+  int secago=(millis() - previousMessageRecTime )/1000;
+  display.setCursor(60, 55);
+  display.print(" ("+String(secago) + "s ago)");
 
   // Display keyboard at the bottom
 
