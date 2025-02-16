@@ -26,8 +26,10 @@ Support the development by getting an official Netgotchi build:
 - [Etsy](https://olleadventures.etsy.com/listing/1752764124)
 
 ## New!
-(Netgotchi CARD)(https://www.tindie.com/products/ollestore/netgotchi-card-7mm-business-card-size/)
-![IMG20250216095802](https://github.com/user-attachments/assets/d4e9a8ed-71e8-414e-957e-50489fa0cb98)
+![Netgotchi CARD](https://www.tindie.com/products/ollestore/netgotchi-card-7mm-business-card-size/)
+ 
+ ![immagine](https://github.com/user-attachments/assets/420866cf-a5f5-4996-8471-86070394fe3f)
+
 
 
 ### Note : for security purpose make sure you buying from from official the link above, you will receive the latest version of this repository, without any modification.  
