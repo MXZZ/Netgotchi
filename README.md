@@ -24,8 +24,11 @@ Support the development by getting an official Netgotchi build:
 
 - [Tindie](https://www.tindie.com/products/ollestore/negotchi-network-security-scanner/)
 - [Etsy](https://olleadventures.etsy.com/listing/1752764124)
-- [Netgotchi on Bonanza](https://www.bonanza.com/listings/NETGOTCHI-pwnagotchi-older-brother-scans-and-protect-your-network-/1657032899?fref=WCsgHJd3)
-- [Amazon](https://amzn.to/4dd5yjA)
+
+## New!
+(Netgotchi CARD)(https://www.tindie.com/products/ollestore/netgotchi-card-7mm-business-card-size/)
+![IMG20250216095802](https://github.com/user-attachments/assets/d4e9a8ed-71e8-414e-957e-50489fa0cb98)
+
 
 ### Note : for security purpose make sure you buying from from official the link above, you will receive the latest version of this repository, without any modification.  
 
@@ -38,7 +41,7 @@ Netgotchi Pro version :
 Pro version has a keypad to access the settings, change mode like chat-device ( TEXTgotchi )  or gpio remote controller ( CTRLgotchi ) , from the device itself without re-flashing settings and a small buzzer for sound alerts!
 - [Netgotchi PRO on Tindie](https://www.tindie.com/products/35655/)
 - [Netgotchi PRO on Etsy](https://olleadventures.etsy.com/listing/1771783598)
-- [Netgotchi PRO on Amazon](https://amzn.to/4gfUogy) 
+  
 
 
 ## 🛠️ Requirements
