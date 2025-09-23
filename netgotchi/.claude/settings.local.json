@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Calicchia Design/Downloads/Netgotchi-v.1.63/netgotchi-original/Netgotchi---ESP32-C6-LCD-1.47/**)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(grep:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

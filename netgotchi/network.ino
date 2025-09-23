@@ -1,13 +1,40 @@
-//Network features 
+// network.ino — FIX per FTP stub + status + LED REST endpoints
+
+#include "globals.h"
+extern String status;        // definita in netgotchi.ino
+
+#ifndef USE_FTP
+  #define USE_FTP 0
+#endif
+
+// Dichiara l’istanza FTP definita in netgotchi.ino (anche quando è lo stub)
+class FtpServer;             // forward-declare del tipo
+extern FtpServer ftpSrv;     // variabile globale definita in netgotchi.ino
+
+// ---- RGB extern/prototipi (definiti in rgb.ino) ----
+extern bool     rgb_enabled;
+extern uint8_t  rgb_brightness;
+extern int      rgb_mode;
+extern uint8_t  rgb_manual_r, rgb_manual_g, rgb_manual_b;
+
+void rgbSetBrightness(uint8_t b);
+void rgbEnable(bool en);
+
+static inline String rgbModeToStr() {
+  if (rgb_mode == RGB_MODE_MANUAL) return "manual";
+  if (rgb_mode == RGB_MODE_OFF)    return "off";
+  return "auto";
+}
+
+// Network features 
 
 void networkInit()
 {
-  
   if (useWifiManager) {
     displayPrintln("TO Configure WIFI");
     displayPrintln("USE: AutoConnectAP");
     displayDisplay();
-    } else {
+  } else {
     displayPrintln("Connecting to WiFi");
     displayDisplay();
   }
@@ -21,18 +48,15 @@ void networkInit()
       delay(5000);
       scheduledRestart = true;
       enableNetworkMode = false;
-    }
-    else
-    {
-      //connection successfull 
+    } else {
+      // connection successful 
       displayPrintln("Connection Successful");
       displayDisplay();
     }
-
   } else {
-    //use normal wifi credential 
+    // use normal wifi credential 
     WiFi.begin(ssid, password);
-      while (WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
       displayPrint(".");
@@ -40,96 +64,137 @@ void networkInit()
     }
   }
 
-  if(webInterface)
-  { 
+  if (webInterface) { 
     server.on("/", handleRoot);
 
     server.on("/matrix", HTTP_GET, [](){
-      if(hasDisplay)server.send(200, "application/json", getPixelMatrix());
+      if (hasDisplay) server.send(200, "application/json", getPixelMatrix());
       else server.send(404);
     });
 
     server.on("/hosts", HTTP_GET, [](){
-        server.send(200, "text/html", getHostsStats());
+      server.send(200, "text/html", getHostsStats());
     });
 
     server.on("/headless", HTTP_GET, [](){
-        server.send(200, "text/html", headlessStatus);
+      server.send(200, "text/html", headlessStatus);
     });
 
     server.on("/command/left", HTTP_GET, [](){
-        handleCommand("left");
-        server.send(200, "text/plain", "Left command received");
+      handleCommand("left");
+      server.send(200, "text/plain", "Left command received");
     });
 
     server.on("/command/right", HTTP_GET, [](){
-        handleCommand("right");
-        server.send(200, "text/plain", "Right command received");
+      handleCommand("right");
+      server.send(200, "text/plain", "Right command received");
     });
 
     server.on("/command/A", HTTP_GET, [](){
-        handleCommand("A");
-        server.send(200, "text/plain", "A command received");
+      handleCommand("A");
+      server.send(200, "text/plain", "A command received");
     });
 
     server.on("/command/B", HTTP_GET, [](){
-        handleCommand("B");
-        server.send(200, "text/plain", "B command received");
+      handleCommand("B");
+      server.send(200, "text/plain", "B command received");
     });
+
     server.on("/command/ON", HTTP_GET, [](){
-        raisePinVoltage();
-        server.send(200, "text/plain", "ON command received");
+      raisePinVoltage();
+      server.send(200, "text/plain", "ON command received");
     });
+
     server.on("/command/OFF", HTTP_GET, [](){
-        lowerPinVoltage();
-        server.send(200, "text/plain", "OFF command received");
+      lowerPinVoltage();
+      server.send(200, "text/plain", "OFF command received");
     });
+
     server.on("/command/TIMEPLUS", HTTP_GET, [](){
-        timeOffset+=3600;
-        timeClient.setTimeOffset(timeOffset);
-        server.send(200, "text/plain", "Hour+ command received");
+      timeOffset += 3600;
+      timeClient.setTimeOffset(timeOffset);
+      server.send(200, "text/plain", "Hour+ command received");
     });
+
     server.on("/command/TIMEMINUS", HTTP_GET, [](){
-        timeOffset-=3600;
-        timeClient.setTimeOffset(timeOffset);
-        server.send(200, "text/plain", "Hour- command received");
+      timeOffset -= 3600;
+      timeClient.setTimeOffset(timeOffset);
+      server.send(200, "text/plain", "Hour- command received");
     });
+
+    // ---- LED REST endpoints ----
+    // Stato corrente (per popolamento UI)
+    server.on("/led/state", HTTP_GET, [](){
+      String json = "{";
+      json += "\"enabled\":" + String(rgb_enabled ? "true":"false");
+      json += ",\"mode\":\"" + rgbModeToStr() + "\"";
+      json += ",\"brightness\":" + String(rgb_brightness);
+      json += ",\"r\":" + String(rgb_manual_r) + ",\"g\":" + String(rgb_manual_g) + ",\"b\":" + String(rgb_manual_b);
+      json += "}";
+      server.send(200, "application/json", json);
+    });
+
+    // Set base: enable/disable, mode, brightness
+    server.on("/led", HTTP_GET, [](){
+      if (server.hasArg("enable")) {
+        rgbEnable(server.arg("enable").toInt() != 0);
+      }
+      if (server.hasArg("b")) {
+        uint8_t b = (uint8_t) constrain(server.arg("b").toInt(), 0, 255);
+        rgbSetBrightness(b);
+      }
+      if (server.hasArg("mode")) {
+        String m = server.arg("mode");
+        if      (m == "auto")   rgb_mode = RGB_MODE_AUTO;
+        else if (m == "manual") rgb_mode = RGB_MODE_MANUAL;
+        else                    rgb_mode = RGB_MODE_OFF;
+      }
+      server.send(200, "text/plain", "OK");
+    });
+
+    // Set colore manuale (quando mode=manual)
+    server.on("/led/color", HTTP_GET, [](){
+      if (server.hasArg("r")) rgb_manual_r = (uint8_t) constrain(server.arg("r").toInt(), 0, 255);
+      if (server.hasArg("g")) rgb_manual_g = (uint8_t) constrain(server.arg("g").toInt(), 0, 255);
+      if (server.hasArg("b")) rgb_manual_b = (uint8_t) constrain(server.arg("b").toInt(), 0, 255);
+      server.send(200, "text/plain", "OK");
+    });
+    // ---- fine LED endpoints ----
 
     server.begin();
   }
 
-
-  
   currentIP = WiFi.localIP();
   SerialPrintLn(currentIP);
   timeClient.begin();
 
-  ftpSrv.begin("admin", "admin");  // Set FTP username and password
-  
+  // FTP opzionale: solo se abilitato
+  #if USE_FTP
+    ftpSrv.begin("admin", "admin");  // Set FTP username and password
+  #endif
 }
 
 void networkFunctionsLoop()
 {
-
-  //ping scan
+  // ping scan
   if (currentMillis - previousMillisScan >= intervalScan) {
     previousMillisScan = currentMillis;
     startScan = !startScan;
   }
 
-  //network integrity
+  // network integrity
   if (currentMillis - previousMillisPing >= intervalPing) {
     previousMillisPing = currentMillis;
     scanOnce = true;
   }
 
-  //sounds alert
+  // sounds alert
   if (currentMillis - previousMillisSoundAlert >= intervalSound) {
     previousMillisSoundAlert = currentMillis;
     if (sounds && honeypotTriggered) playAlert();
   }
 
-  //  Evil Twin scans
+  // Evil Twin scans
   if (currentMillis - previouslastEvilTwinCheck >= evilTwinScanInterval) {
     previouslastEvilTwinCheck = currentMillis;
     bool previousEvilTwinStatus = evilTwinDetected;
@@ -139,7 +204,7 @@ void networkFunctionsLoop()
     }
   }
 
-  //Ping Scan
+  // Ping Scan
   if (startScan) {
     if (i < 256) {
       pingNetwork(i);
@@ -151,12 +216,11 @@ void networkFunctionsLoop()
     }
   }
 
-  //honeypot Checks
+  // honeypot Checks (solo se FTP attivo)
   ftpHoneypotScan();
 
   // Handle webInterface requests
-  if(webInterface) server.handleClient();
-
+  if (webInterface) server.handleClient();
 }
 
 void pingNetwork(int i) {
@@ -177,13 +241,12 @@ void pingNetwork(int i) {
       }
     }
   } else {
-    if (ips[i] == -1) ips[i] = 0;
-    else if (ips[i] == 1) ips[i] = -1;
-    else if (ips[i] == 2) ips[i] = -1;
-    else ips[i] = 0;
+    if (ips[i] == -1)      ips[i] = 0;
+    else if (ips[i] == 1)  ips[i] = -1;
+    else if (ips[i] == 2)  ips[i] = -1;
+    else                   ips[i] = 0;
   }
 }
-
 
 bool detectEvilTwin() {
   int numNetworks = WiFi.scanNetworks();
@@ -192,28 +255,24 @@ bool detectEvilTwin() {
 
   for (int i = 0; i < numNetworks; i++) {
     String ssid = WiFi.SSID(i);
-
     if (ssid == knownNetworks[0].ssid) {
-        ssid_count++;
+      ssid_count++;
     }
   }
-  if (ssid_count> 1 ) currentEvilTwinStatus = true;
+  if (ssid_count > 1) currentEvilTwinStatus = true;
 
   if (currentEvilTwinStatus != evilTwinDetected) {
-    if (currentEvilTwinStatus) {
-      SerialPrintLn("Evil Twin appeared");
-    } else {
-      SerialPrintLn("Evil Twin disappeared");
-    }
+    if (currentEvilTwinStatus) SerialPrintLn("Evil Twin appeared");
+    else                       SerialPrintLn("Evil Twin disappeared");
   }
   return currentEvilTwinStatus;
 }
 
-
 int scanForDangerousServices(IPAddress ip) {
   WiFiClient client;
-  for (int i = 0; i < sizeof(dangerousServices) / sizeof(dangerousServices[0]); ++i) {
-    if (skipFTPScan && dangerousServices[i].name == "FTP") continue;
+  for (int i = 0; i < (int)(sizeof(dangerousServices) / sizeof(dangerousServices[0])); ++i) {
+    // evita di testare FTP se skipFTPScan è attivo
+    if (skipFTPScan && String(dangerousServices[i].name) == "FTP") continue;
     if (client.connect(ip, dangerousServices[i].port)) {
       SerialPrintLn("Open port found: ");
       SerialPrintLn(dangerousServices[i].name);
@@ -229,19 +288,23 @@ int scanForDangerousServices(IPAddress ip) {
   return 0;
 }
 
-
 void ftpHoneypotScan() {
-  ftpSrv.handleFTP();
-  #if defined(ESP8266)
-    if (ftpSrv.returnHoneypotStatus()) {
-      honeypotTriggered = true;
-      delay(500);
-    }
+  #if USE_FTP
+    ftpSrv.handleFTP();
+    #if defined(ESP8266)
+      if (ftpSrv.returnHoneypotStatus()) {
+        honeypotTriggered = true;
+        delay(500);
+      }
+    #else
+      if (ftpSrv.isClientConnected()) {
+        honeypotTriggered = true;
+        delay(500);
+      }
+    #endif
   #else
-    if (ftpSrv.isClientConnected()) {
-      honeypotTriggered = true;
-      delay(500);
-    }
+    // FTP disabilitato: nessun honeypot
+    honeypotTriggered = false;
   #endif
 }
 
@@ -250,15 +313,10 @@ void handleRoot() {
 }
 
 void handleCommand(String command) {
-    if (command == "left") {
-       handleButtons(BTN_LEFT);
-    } else if (command == "right") {
-       handleButtons(BTN_RIGHT);
-    } else if (command == "A") {
-       handleButtons(BTN_A);
-    } else if (command == "B") {
-       handleButtons(BTN_A);
-    }
+  if      (command == "left")  { handleButtons(BTN_LEFT); }
+  else if (command == "right") { handleButtons(BTN_RIGHT); }
+  else if (command == "A")     { handleButtons(BTN_A); }
+  else if (command == "B")     { handleButtons(BTN_A); } // intenzionale come nel codice originale
 }
 
 void saveCurrentNetworkInfos()
@@ -268,14 +326,11 @@ void saveCurrentNetworkInfos()
   knownNetworks[0].ssid = WiFi.SSID();
 }
 
-
 String getHostsStats() {
-
   String list = "<br>";
   String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
   for (int j = 0; j < max_ip; j++) {
     if (ips[j] != 0) {
-
       if (ips[j] == 1) {
         list += ipprefix + String(j) + " UP" + "<br>";
       }
@@ -289,7 +344,3 @@ String getHostsStats() {
   }
   return list;
 }
-
-
-
-

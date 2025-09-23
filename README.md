@@ -1,12 +1,30 @@
-# 🛡️ Netgotchi
+# 🛡️ Netgotchi - ESP32-C6 + ST7789 1.47" LCD Fork
 
 ![Netgotchi Image](https://github.com/MXZZ/Netgotchi/assets/3322271/947416e6-c088-4167-ba62-e69a6d1170ce)
 
 > Netgotchi: Your network's loyal guardian! 🐾
 
+This is a **community fork** of the original Netgotchi project, specifically adapted for **Waveshare ESP32-C6-LCD-1.47"** with **ST7789 display (172×320)** using Arduino IDE.
+
 A small arduino .ino script with some great functions to detect intruders or breaches in the network, it pings periodically the network and reports if any new device. It also has a rudimental "Honeypot" functionality with a rudimental exposed service, once someone reaches the honeypot it will trigger an alarm. Please contribute to the repository via pull requests!
 
 Tested with Nmap, service scan / intense scan will trigger the alert.
+
+## 🔥 This Fork Features
+- ✅ **ESP32-C6** compatibility with Arduino IDE
+- ✅ **ST7789 1.47" TFT LCD** (172×320) support replacing OLED
+- ✅ **ESP-NOW** API updated for ESP32 v3.x (IDF 5.x)
+- ✅ **FTP disabled** with stub implementation (no SD_MMC dependency)
+- ✅ **Deauther module excluded** (ESP8266 only) with safe stubs
+- ✅ Various fixes: pin definitions, display initialization, WebUI compatibility
+
+## ⚠️ AI Development Disclaimer
+**All code modifications and adaptations in this fork were developed with assistance from ChatGPT-5 Extended Thinking**. While the code has been tested and works, there may be more optimal approaches or improvements possible. We encourage the community to:
+- **Open issues** if you find bugs or have suggestions
+- **Submit pull requests** with optimizations or improvements
+- **Share better implementation approaches** for any of the adaptations made
+
+Your expertise and contributions are welcome to make this fork even better!
 
 ## 🌟 Features
 
@@ -14,79 +32,139 @@ Tested with Nmap, service scan / intense scan will trigger the alert.
 - 🍯 Built-in "Honeypot" functionality
 - 🚨 Intrusion detection and alerting
 - 🖥️ Support for multiple OLED display types
-- 🔄 Supports both ESP8266 and ESP32
+- 🔄 Original supports ESP8266 and ESP32 (this fork specialized for ESP32-C6)
 
-![Netgotchi Screen 1](https://github.com/MXZZ/Netgotchi/assets/3322271/cf8d7fec-7b33-4f14-9992-8cb4806633f2) ![Netgotchi Screen 2](https://github.com/MXZZ/Netgotchi/assets/3322271/68f4fe6c-9172-422b-ba39-ee901c098840)
+## 📸 ESP32-C6 Fork in Action
 
-## 🛒 Get an Official Build and support the development ❤ 
+### Main Interface with Network Status
+![Netgotchi Main Screen](images/fork/screen1.jpg)
+*Shows the main interface with IP address, uptime, network hosts count, and honeypot status - all displayed on the beautiful ST7789 color display*
 
-Support the development by getting an official Netgotchi build:
+### Network Monitoring Dashboard
+![Network Monitoring](images/fork/screen2.jpg)
+*Network scanning visualization showing detected devices and connectivity status in real-time*
 
-- [Tindie](https://www.tindie.com/products/ollestore/negotchi-network-security-scanner/)
-- [Etsy](https://olleadventures.etsy.com/listing/1752764124)
+### Netgotchi Face Animation
+![Netgotchi Face](images/fork/screen3.jpg)
+*The iconic Netgotchi face with scan mode indicator - now in full color on the 1.47" TFT display*
 
-## New!
-![Netgotchi CARD](https://www.tindie.com/products/ollestore/netgotchi-card-7mm-business-card-size/)
- 
- ![immagine](https://github.com/user-attachments/assets/420866cf-a5f5-4996-8471-86070394fe3f)
+### RGB LED Strip Integration
+![RGB Working](images/fork/rgb-working.jpg)
+*Showcasing the RGB LED strip integration with the 3D printed case - adding visual network status indicators*
 
+### Original Project Screenshots (for comparison)
+![Original Netgotchi OLED](https://github.com/MXZZ/Netgotchi/assets/3322271/cf8d7fec-7b33-4f14-9992-8cb4806633f2) ![Original Interface](https://github.com/MXZZ/Netgotchi/assets/3322271/68f4fe6c-9172-422b-ba39-ee901c098840)
+*Original project with OLED display - compare with the colorful ST7789 version above!*
 
+## 🛒 Support Original Development ❤
 
-### Note : for security purpose make sure you buying from from official the link above, you will receive the latest version of this repository, without any modification.  
+**This is a community fork. Please support the original creator [MXZZ](https://github.com/MXZZ)**:
 
-PRO version & Prototypes 
+- [Original Netgotchi on Tindie](https://www.tindie.com/products/ollestore/negotchi-network-security-scanner/)
+- [Original Netgotchi on Etsy](https://olleadventures.etsy.com/listing/1752764124)
 
-
-![IMG_20240829_1519522](https://github.com/user-attachments/assets/b584b5f6-9727-46fc-9bce-9cad7c8529e4)
-
-Netgotchi Pro version :
-Pro version has a keypad to access the settings, change mode like chat-device ( TEXTgotchi )  or gpio remote controller ( CTRLgotchi ) , from the device itself without re-flashing settings and a small buzzer for sound alerts!
-- [Netgotchi PRO on Tindie](https://www.tindie.com/products/35655/)
-- [Netgotchi PRO on Etsy](https://olleadventures.etsy.com/listing/1771783598)
+### Original Netgotchi PRO
+The original project offers a PRO version with keypad interface, multiple modes (TEXTgotchi, CTRLgotchi), and audio alerts. **This fork focuses only on ESP32-C6 + ST7789 compatibility** and doesn't include the PRO features.
   
 
 
-## 🛠️ Requirements
+## 🛠️ Requirements (ESP32-C6 Fork)
 
-- ESP8266 or ESP32
+### Hardware
+- **Waveshare ESP32-C6-LCD-1.47"** board
+- **ST7789 1.47" TFT LCD** (172×320 resolution)
+- USB-C cable for programming
+- Optional: **3D Printed Case** - [ESP32-C6 Display Case on MakerWorld](https://makerworld.com/it/models/1628925-esp32-c6-display-case)
+
+### Software
+- **Arduino IDE** with ESP32 Core v3.x
+- **Board**: ESP32C6 Dev Module
+
+### Libraries (Install via Library Manager)
+- **Adafruit GFX Library**
+- **Adafruit ST7735 and ST7789 Library**
+- **WiFiManager** (by tzapu)
+- **Button2** (by Lennart Hennigs)
+- **NTPClient**
+- **ESP32Ping** (optional, for min/avg/max ping stats)
+
+### Original Requirements (for reference)
+- ESP8266 or ESP32 (standard versions)
 - OLED display (SSD1306, SH1106, or SSD1305)
-- USB cable
 - Optional: 3D printed case ([Community case for Wemos D1](https://www.printables.com/model/510481-terminal-for-ssd1306-096-oled-and-wemos-d1-mini))
 
 ## 📊 Wiring Diagram
-ESP8266
+
+### ESP32-C6 + ST7789 Pin Configuration (This Fork)
+
+| Signal | GPIO | Function |
+|:-------|:----:|:---------|
+| MOSI   | 6    | SPI Data |
+| SCLK   | 7    | SPI Clock |
+| CS     | 14   | Chip Select |
+| DC     | 15   | Data/Command |
+| RST    | 21   | Reset |
+| BL     | 22   | Backlight |
+
+> **Note**: No MISO pin needed for ST7789 display.
+
+### Original Wiring Diagrams (for reference)
+
+**ESP8266**
 ![Netgotchi Diagram](https://github.com/MXZZ/Netgotchi/assets/3322271/54fb9be5-4fe4-4ff3-b24a-f2a05287d893)
-ESP32
+
+**ESP32**
 ![esp32](https://github.com/user-attachments/assets/cc486dfd-fdb6-468b-a158-2e0a78891ac4)
 
 
 ## 📚 Libraries
 
+### ESP32-C6 Fork Libraries
+- **ESP32 Core v3.x** (required for ESP32-C6 support)
+- **Adafruit GFX Library**
+- **Adafruit ST7735 and ST7789 Library** (replaces OLED libraries)
+- **WiFiManager** (tzapu)
+- **Button2** (Lennart Hennigs)
+- **NTPClient**
+- **ESP32Ping** (optional, for enhanced ping statistics)
+
+> **Note**: FTP functionality is disabled in this fork with stub implementation (no SD_MMC dependency required)
+
+### Original Libraries (for reference)
 - ESP8266/ESP32 core libraries
-- Modified FTP Server library (ESP8266FtpServer or ESP32FtpServer) -- you need to install the one provided in the "/libraries" folder in this repo
-- Adafruit_GFX
-- Adafruit_SSD1306, Adafruit_SH110X, or Adafruit_SSD1305 (based on your OLED type)
+- Modified FTP Server library (ESP8266FtpServer or ESP32FtpServer)
+- Adafruit_SSD1306, Adafruit_SH110X, or Adafruit_SSD1305 (OLED displays)
 - ESPping
-- NTPClient
-- WiFiManager
-- Button2
 
-## 🚀 How to Use
+## 🚀 How to Use (ESP32-C6 Fork)
 
-1. Open the `.ino` file in the Arduino IDE, make sure you have all files open like the image below :
-   ![immagine](https://github.com/user-attachments/assets/552f5d19-d55d-4d47-9ef4-f200438421e6)
+### Setup Instructions
 
-2. Select your OLED display type by setting the appropriate flag to 1 (e.g., `#define oled_type_ssd1306 1`).![immagine](https://github.com/user-attachments/assets/c1fef59b-e22a-4555-94cb-8ef26b71e756)
+1. **Install ESP32 Board Package**: Make sure you have ESP32 Arduino Core v3.x installed
+2. **Install Required Libraries**: Use Arduino Library Manager to install all libraries listed above
+3. **Download Fork Files**: Clone or download this fork repository
+4. **Open in Arduino IDE**: Open `netgotchi.ino` and ensure all accompanying files are loaded
+5. **Select Board**: Choose "ESP32C6 Dev Module" from the board menu
+6. **Verify Pins**: The fork automatically configures ST7789 pins (no manual configuration needed)
+7. **Upload**: Compile and upload to your ESP32-C6 board
 
-3. Install the required libraries via the Arduino Library Manager.
-4. Select your board (ESP8266 or ESP32) in the Arduino IDE.
-5. Flash the code to your board.
-6. On the first boot, Netgotchi will create a WiFi hotspot named "AutoConnectAP" for you to set up your WiFi credentials.
-7. Once connected, Netgotchi will start guarding your network!
+### Added Files (specific to this fork)
+- `globals.h` - Unified include for all .ino files
+- `pins_local.h` - Pin definitions (BTN_A/B/LEFT/RIGHT, BUZZER_PIN, etc.)
+- `espnow.h` - ESP-NOW compatibility wrapper for ESP32 v3.x
+- `ESPping.h` - Ping library mapping
+- `compat/CompatST7789.h` - ST7789 compatibility layer
 
-Netgotchi Pro configuration :
- 
-![immagine](https://github.com/user-attachments/assets/8470aba4-9c47-469d-80bb-6da349b01436)
+### First Boot
+1. On first boot, Netgotchi creates a WiFi hotspot named "AutoConnectAP"
+2. Connect to the hotspot and configure your WiFi credentials
+3. Once connected, Netgotchi will start guarding your network on the ST7789 display!
+
+### Key Differences from Original
+- **Display**: Uses ST7789 TFT instead of OLED (colors supported!)
+- **FTP**: Disabled (stub implementation, no SD card needed)
+- **Deauther**: Disabled on ESP32-C6 (ESP8266 feature only)
+- **ESP-NOW**: Updated for ESP32 v3.x compatibility
 
 
 ## 🖥️ Headless Mode (for Cyberdecks)
@@ -147,18 +225,47 @@ Netgotchi IP and uptime
 Pro only : move page and setting menu on left button / right button  
 V2 and Pro only : audio alarm on attack  
  
-## 😊 Join us on Discord
+## 🔧 Troubleshooting (ESP32-C6 Fork)
 
-Discord Server: [Join Now](https://discord.gg/hM4w8eTKrt)!
+### Common Issues
+- **ESP-NOW compilation errors**: Ensure all `.ino` files include `globals.h` at the top
+- **Missing `minTime()/maxTime()` functions**: Install ESP32Ping library or use only `averageTime()`
+- **Display shows nothing**: Check wiring connections and ensure ST7789 library is installed
+- **SD_MMC errors**: FTP is disabled in this fork, these errors shouldn't occur
+- **WebUI matrix appears empty**: This is normal on ST7789 (no framebuffer for 128×64 matrix view)
 
-## 🤝 Contributing
+### Legal Notice
+**Deauther functions are disabled on ESP32-C6** and may be illegal in many countries. This fork focuses on network monitoring only.
 
-We welcome contributions! Please submit your pull requests to help make Netgotchi even better.
+## 😊 Join Community
 
-Join our [Reddit community](https://www.reddit.com/r/Netgotchi/)!
+**Original Project Discord**: [Join Now](https://discord.gg/hM4w8eTKrt)!
+**Original Reddit Community**: [r/Netgotchi](https://www.reddit.com/r/Netgotchi/)
+
+> This fork is community-maintained. For original project support, use the official channels above.
+
+## 🤝 Contributing to This Fork
+
+We welcome contributions to improve the ESP32-C6 + ST7789 compatibility! Please:
+- **Open issues** for bugs or enhancement requests
+- **Submit pull requests** with improvements
+- **Share optimization ideas** - remember, this was developed with AI assistance
+- **Test on different ESP32-C6 boards** and report compatibility
+
+For the original project, please contribute to [MXZZ/Netgotchi](https://github.com/MXZZ/Netgotchi).
+
+## 🔄 Fork Information
+
+This is a community fork of the original Netgotchi project, specifically adapted for ESP32-C6 + ST7789 1.47" display compatibility.
+
+**Original Project**: [Netgotchi by MXZZ](https://github.com/MXZZ/Netgotchi)
+**Fork Author**: [Federicokalik](https://github.com/Federicokalik)
+**Fork Focus**: ESP32-C6 + ST7789 display support with Arduino IDE compatibility
+**Development**: Fork with ChatGPT-5 Extended Thinking assistance
 
 ## 📜 License
 
 GNU General Public License v3.0
 
-Created with ❤️ by MG [MXZZ](https://github.com/MXZZ) | ESP32 Port Created by [itsOwen](https://github.com/itsOwen)
+**Original Project** created with ❤️ by MG [MXZZ](https://github.com/MXZZ) | ESP32 Port by [itsOwen](https://github.com/itsOwen)
+**ESP32-C6 + ST7789 Fork** by [Federicokalik](https://github.com/Federicokalik) with ChatGPT-5 Extended Thinking assistance

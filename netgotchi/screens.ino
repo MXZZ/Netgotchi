@@ -1,43 +1,107 @@
-//Screens functions
+// Screens functions — margini e testi ottimizzati per ST7789 320x172
 
-
-
-void displayInit()
-{
-  //to skip if the board has not display 
-  if(hasDisplay)
-  {
-    //display initializer
-    if(oled_type_ssd1306){
-      // spefify your pins if needed 
-      // Wire.begin(D5, D6);
-      if (!display.begin(2, 0x3C)) { 
-        // add "SSD1306_SWITCHCAPVCC, 0x3C" in the begin() if screen doesn't work. 
+// --- Se stai usando ST7789, la displayInit() è in netgotchi.ino ---
+#ifdef USE_ST7789
+// nothing here
+#else
+void displayInit() {
+  if (hasDisplay) {
+    if (oled_type_ssd1306) {
+      if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
         SerialPrintLn("SSD1306 allocation failed");
         for (;;);
       }
-    }
-    else
-    { 
-      if (!display.begin()) { 
+    } else {
+      if (!display.begin()) {
         SerialPrintLn("Display allocation failed");
         for (;;);
       }
     }
   }
 }
+#endif
 
+// ---------- Layout helpers ----------
+static const int FONT_W = 6;         // font classico Adafruit_GFX
+static const int FONT_H = 8;
+static const int UI_MARGIN_X = 12;   // margine sinistro/destro
+static const int UI_MARGIN_Y = 8;    // margine alto/basso
+
+static inline int textW(const String &s, int size) { return (int)s.length() * FONT_W * size; }
+static inline int textH(int size) { return FONT_H * size; }
+
+// setCursor con margine (comodo per elementi a sinistra)
+static inline void setCursorM(int x, int y) { displaySetCursor(x + UI_MARGIN_X, y + UI_MARGIN_Y); }
+
+// setCursor allineato a destra (x = bordo destro - margine - larghezza testo)
+static inline void setCursorRight(const String& s, int y, int size) {
+  int x = SCREEN_WIDTH - UI_MARGIN_X - textW(s, size);
+  displaySetCursor(x, y + UI_MARGIN_Y);
+  displaySetSize(size);
+}
+
+// setCursor in basso a sinistra
+static inline void setCursorBL(int size) {
+  int y = SCREEN_HEIGHT - UI_MARGIN_Y - textH(size);
+  displaySetCursor(UI_MARGIN_X, y);
+  displaySetSize(size);
+}
+
+// setCursor in basso a destra con una stringa di riferimento
+static inline void setCursorBR(const String& s, int size) {
+  int y = SCREEN_HEIGHT - UI_MARGIN_Y - textH(size);
+  int x = SCREEN_WIDTH - UI_MARGIN_X - textW(s, size);
+  displaySetCursor(x, y);
+  displaySetSize(size);
+}
+
+/* ====== Faccine centrate (senza confliggere con faces.ino) ====== */
+
+// restituisce la faccina in base allo stato (riusa le stringhe globali)
+static inline String faceByState_(int s) {
+  switch (s % 6) {
+    case 0: return netgotchiFace;          // "(-v_v)"
+    case 1: return netgotchiFace2;         // "(v_v-)"
+    case 2: return netgotchiFaceBlink;     // "( .__.)"
+    case 3: return netgotchiFaceHappy;     // "(^=^)"
+    case 4: return netgotchiFaceSurprised; // "(o__o)"
+    default: return netgotchiFaceSleep;    // "(-__- )"
+  }
+}
+
+// stampa la faccina centrata orizzontalmente (font size 2) con jitter clampato ai margini
+void drawnetgotchiFaceCentered(int state) {
+  const int size = 2;
+  String face = faceByState_(state);
+
+  int w = textW(face, size);
+  int h = textH(size);
+
+  // centro + jitter (moveX) limitato ai margini
+  int x = (SCREEN_WIDTH - w) / 2 + moveX;
+  if (x < UI_MARGIN_X) x = UI_MARGIN_X;
+  if (x > SCREEN_WIDTH - UI_MARGIN_X - w) x = SCREEN_WIDTH - UI_MARGIN_X - w;
+
+  // verticale: un filo sopra il centro
+  int y = (SCREEN_HEIGHT - h) / 2 - 6;
+
+  displaySetTextColor(1);
+  displaySetSize(size);
+  displaySetCursor(x, y);
+  displayPrint(face);
+}
+/* =============================================================== */
+
+// ---------- Schermate ----------
 void drawSpace() {
   displayClearDisplay();
   updateAndDrawStars();
   drawUFO();
-  if(enableNetworkMode)
-  { 
+
+  if (enableNetworkMode) {
     displayTimeAndDate();
     displayStats();
-  }
-  else
-  {
+  } else {
     displayOfflineMode();
   }
   displayDisplay();
@@ -49,13 +113,10 @@ void displayRippleSpace() {
   drawRipple();
   netgotchi_face();
 
-  if(enableNetworkMode)
-  { 
+  if (enableNetworkMode) {
     displayTimeAndDate();
     displayStats();
-  }
-  else
-  {
+  } else {
     displayOfflineMode();
   }
   displayDisplay();
@@ -64,32 +125,41 @@ void displayRippleSpace() {
 
 void NetworkStats() {
   displayClearDisplay();
-  displaySetCursor(0, 8);
-  if (WiFi.status() == WL_CONNECTED) networkStatus = "connected";
-  else networkStatus = "disconnected";
-  displayPrint("Network: " + networkStatus);
-  displaySetCursor(0, 16);
 
+  // Titolo stato rete (sinistra)
+  displaySetTextColor(1);
+  displaySetSize(2);
+  setCursorM(0, 0);
+  networkStatus = (WiFi.status() == WL_CONNECTED) ? "connected" : "disconnected";
+  displayPrint("Net: " + networkStatus);
+
+  // Ping solo una volta per ciclo
+  displaySetSize(1);
+  setCursorM(0, textH(2) + 2);
   if (scanOnce) {
-    IPAddress ip(1, 1, 1, 1);  // ping cloudflare
+    IPAddress ip(1, 1, 1, 1);  // Cloudflare
     SerialPrintLn("pinging cloudflare");
-
     if (Ping.ping(ip, 2)) {
       externalNetworkStatus = "Reachable";
-      displayPrintln();
       scanOnce = false;
-      stats = "\n min: " + String(Ping.minTime()) + "ms \n avg: " + String(Ping.averageTime()) + "ms \n max: " + String(Ping.maxTime()) + "ms";
-      delay(500);
+      stats = "avg: " + String(Ping.averageTime()) + "ms";
       SerialPrintLn("ping sent");
       SerialPrintLn(stats);
-    } else externalNetworkStatus = "Unreachable";
+    } else {
+      externalNetworkStatus = "Unreachable";
+      stats = "avg: n/a";
+    }
   }
-  displayPrintln("Network Speed: " + stats);
-  displayPrintln("Internet: " + externalNetworkStatus);
+  displayPrint("Speed: " + stats);
+
+  // Internet status (riga sotto)
+  setCursorM(0, textH(2) + textH(1) + 6);
+  displayPrint("Internet: " + externalNetworkStatus);
+
+  // HUD standard
+  displayStats();
   displayDisplay();
 }
-
-
 
 void initStars() {
   for (int i = 0; i < NUM_STARS; i++) {
@@ -123,16 +193,13 @@ void drawUFO() {
   ufoY = SCREEN_HEIGHT / 2 + cos(millis() / 1500.0) * 10;
 }
 
-
 int frame = 0;
-int numCircles = 10;
-int maxRadius = 70;
-void drawRipple()
-{
-  int radius = (frame  * 10) % maxRadius;
+int maxRadius = 120;
+void drawRipple() {
+  int radius = (frame * 10) % maxRadius;
   displayDrawCircle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, radius, 1);
   frame++;
-  delay(100);
+  delay(90);
 }
 
 void displayTimeAndDate() {
@@ -144,217 +211,220 @@ void displayTimeAndDate() {
   int currentMonth = ptm->tm_mon + 1;
   int currentYear = ptm->tm_year + 1900;
 
-  displaySetSize(1);
+  // Ora in grande
   displaySetTextColor(1);
-  displaySetCursor(5, 0);
+  displaySetSize(2);
+  setCursorM(0, 0);
   displayPrint(formattedTime);
-  displaySetCursor(0, 8);
+
+  // Data subito sotto
+  displaySetSize(1);
+  setCursorM(0, textH(2));
   displayPrintDate("%02d/%02d/%d", currentDay, currentMonth, currentYear);
-  
+
+  // Honeypot in alto a destra
+  displaySetSize(1);
+  String hp = "Honeypot";
+  setCursorRight(hp, 0, 1);
+  displayPrint(hp);
+  setCursorRight(hp, textH(1), 1);
+  displayPrint(honeypotTriggered ? "BREACHED" : "OK");
 }
 
-void displayStats()
-{
-  displaySetCursor(0, 55);
-  displayPrint("Hosts:" + String(ipnum) + " VU:" + String(vulnerabilitiesFound));
-  displaySetCursor(75, 0);
-  displayPrint("Honeypot");
-  if (honeypotTriggered) {
-    if (((seconds % 2) == 0)) {
-      displaySetCursor(80, 8);
-      displayPrint("Breached");
-      displaySetCursor(40, 16);
+void displayStats() {
+  // Basso sinistra: Hosts/VU
+  displaySetTextColor(1);
+  setCursorBL(1);
+  displayPrint("Hosts:" + String(ipnum) + "  VU:" + String(vulnerabilitiesFound));
 
-      #if defined(ESP8266)
-        displayPrint(ftpSrv.getHoneyPotBreachIPandTime());
-      #endif
-    }
-  } else {
-    displaySetCursor(80, 8);
-    displayPrint("OK");
-  }
-
-  displaySetCursor(90, 55);
-  if (startScan)
-    displayPrint("Scan");
-  else displayPrint("Idle");
+  // Basso destra: stato scan/idle
+  String mode = startScan ? "Scan" : "Idle";
+  setCursorBR(mode, 1);
+  displayPrint(mode);
 }
 
 void displayIPS() {
   displayClearDisplay();
-  displaySetCursor(0, 0);
-  displayPrintln("Found Hosts:");
+  displaySetTextColor(1);
 
-  if(ipnum>0) {
+  // Titolo
+  displaySetSize(2);
+  setCursorM(0, 0);
+  displayPrint("Found Hosts");
+
+  // Lista (font 1, righe da 12px)
+  displaySetSize(1);
+  int lineY = textH(2) + 6;
+
+  if (ipnum > 0) {
     String ipprefix = String(currentIP[0]) + "." + String(currentIP[1]) + "." + String(currentIP[2]) + ".";
+    int shown = 0;
 
     for (int j = 0; j < max_ip; j++) {
       if (ips[j] == 1 || ips[j] == -1 || ips[j] == 2) {
-        if (iprows >= 4) {
-          displayClearDisplay();
-          displaySetCursor(5, 0);
-          displayPrintln("Hosts:" + String(ipnum));
-          iprows = 0;
+        if (lineY > SCREEN_HEIGHT - UI_MARGIN_Y - textH(1)) {
+          // pagina successiva semplice: ferma qui e lascia HUD
+          break;
         }
-        displaySetCursor(0, 20 + (iprows)*10);
-        if (ips[j] == 1) {
-          String al = ipprefix + String(j) + " UP";
-          displayPrintln(al);
-          iprows++;
-        }
-        if (ips[j] == 2) {
-          String al = ipprefix + String(j) + " WRNG!";
-          displayPrintln(al);
-          iprows++;
-        }
-        if (ips[j] == -1) {
-          String dc = ipprefix + String(j) + " DOWN";
-          displayPrintln(dc);
-          iprows++;
-        }
-
-        delay(500);
-        if (iprows == 4) delay(1000);
-        displayDisplay();
+        setCursorM(0, lineY);
+        if      (ips[j] == 1)  displayPrint(ipprefix + String(j) + "  UP");
+        else if (ips[j] == 2)  displayPrint(ipprefix + String(j) + "  WARN!");
+        else if (ips[j] == -1) displayPrint(ipprefix + String(j) + "  DOWN");
+        lineY += 12;
+        shown++;
       }
     }
+  } else {
+    // Nessun host: passa alla prossima schermata
+    nextScreen();
   }
-  else nextScreen();
+
+  // HUD
+  displayStats();
+  displayDisplay();
 }
 
-void displayNetgotchi()
-{
+void displayNetgotchi() {
   displayClearDisplay();
   updateAndDrawStars();
 
-  if(enableNetworkMode)
-  {
+  if (enableNetworkMode) {
     displayTimeAndDate();
     displayStats();
+  } else {
+    displayOfflineMode();
   }
-  else displayOfflineMode();
 
   netgotchi_face();
   displayDisplay();
-
 }
 
 void netgotchi_face() {
-  
-  displaySetSize(2);
-  drawnetgotchiFace(animState);
+  // faccina centrata
+  drawnetgotchiFaceCentered(animState);
 
+  // animazione tempo + jitter
   if (seconds - old_seconds > 1) {
     moveX = moveX + random(-5, 5);
-    if (moveX > 20) moveX = 5;
+    if (moveX > 20)  moveX = 5;
     if (moveX < -20) moveX = -5;
 
     old_seconds = seconds;
-    animState++;
-    if (animState > 5) animState = 0;
+    animState = (animState + 1) % 6;
   }
+
+  // ripristina size predefinito per l'HUD
   displaySetSize(1);
 }
 
-
-void displayOfflineMode()
-{
-  displaySetCursor(0, 55);
+void displayOfflineMode() {
+  setCursorBL(1);
   displayPrint("Netgotchi is Offline");
 }
 
-void netgotchiIntro()
-{
+void netgotchiIntro() {
   displayClearDisplay();
+  displaySetTextColor(1);
+
+  // Titolo grande
+  displaySetSize(2);
+  setCursorM(0, 0);
+  displayPrint("Netgotchi v." + String(VERSION) + "-C6");
+
+  // Sottotitolo
   displaySetSize(1);
-  displaySetTextColor(1);  //white color
-  displaySetCursor(0, 0);
-  displayPrintln("Netgotchi v." + String(VERSION));
-  displayPrintln("created by MXZZ ");
-  delay(500);
+  setCursorM(0, textH(2) + 6);
+  displayPrint("Forked by Federicokalik");
+  displayDisplay();
+  delay(700);
 }
 
-void displaySettings()
-{
+void displaySettings() {
   displayClearDisplay();
-  displaySetCursor(0, 0);
-  displayPrintln("Settings v." + String(VERSION));
-  displaySetCursor(0, 10);
+  displaySetTextColor(1);
 
-  for(int i=0; i< settingLength ;i++)
-  {
-    if(selectedSetting == i)
-    displayPrintln(">"+settings[i]);
-    else
-    displayPrintln(" "+settings[i]);
+  // Titolo
+  displaySetSize(2);
+  setCursorM(0, 0);
+  displayPrint("Settings v." + String(VERSION));
+
+  // Voci (font 1)
+  displaySetSize(1);
+  int y = textH(2) + 6;
+  for (int i = 0; i < settingLength; i++) {
+    setCursorM(0, y);
+    if (selectedSetting == i) displayPrint(">" + settings[i]);
+    else                      displayPrint(" " + settings[i]);
+    y += 12;
   }
   displayDisplay();
 }
 
-void displayNetgotchiStats(){
+void displayNetgotchiStats() {
   displayClearDisplay();
-  displaySetCursor(0, 0);
-  displayPrintln("Netgotchi v." + String(VERSION));
-  displaySetCursor(0, 10);
+  displaySetTextColor(1);
 
-  displayPrintln("IP:  " + currentIP.toString() );
-  displayPrintln("Uptime:" + String(seconds)+"sec");
-  if( WiFi.status() == WL_CONNECTED)displayPrintln("SSID:" + WiFi.SSID());
+  // Titolo
+  displaySetSize(2);
+  setCursorM(0, 0);
+  displayPrint("Netgotchi v." + String(VERSION) + "-C6");
 
-  
+  // Info (font 1, spaziatura 12)
+  displaySetSize(1);
+  int y = textH(2) + 6;
+  setCursorM(0, y);          displayPrint("IP:  " + currentIP.toString()); y += 12;
+  setCursorM(0, y);          displayPrint("Uptime: " + String(seconds) + "s"); y += 12;
+  if (WiFi.status() == WL_CONNECTED) {
+    setCursorM(0, y);        displayPrint("SSID: " + WiFi.SSID()); y += 12;
+  }
+
+  // HUD
+  displayStats();
   displayDisplay();
 }
 
-void screenAnimations()
-{
-  //animations loop on the same carousel page
-  
+void screenAnimations() {
   if (animation == 0) displayNetgotchi();
   if (animation == 1) drawSpace();
   if (animation > max_anim) animation = 0;
 }
 
-
 int getPixelAt(int x, int y) {
-    // Check if coordinates are within bounds
-    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) {
-        return -1;  // Out of bounds
-    }
-
-    // Calculate the index of the byte in the buffer
-    int byteIndex = (y / 8) * SCREEN_WIDTH + x;  // Find which byte
-    int bitIndex = y % 8;  // Find which bit within the byte
-
-    // Get the byte value from the buffer
-    uint8_t* buffer = displayGetBuffer();
-    uint8_t byteValue = buffer[byteIndex];
-  
-    // Check if the pixel is set (1 for white, 0 for black)
-    bool isWhite = (byteValue & (1 << bitIndex)) != 0;
-    return isWhite ? 1 : 0;
+  if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return -1;
+#ifdef USE_ST7789
+  // ST7789 non ha framebuffer → WebUI "matrix" ritorna 0 (nero)
+  return 0;
+#else
+  int byteIndex = (y / 8) * SCREEN_WIDTH + x;
+  int bitIndex  = y % 8;
+  uint8_t* buffer = displayGetBuffer();
+  if (!buffer) return 0;
+  uint8_t byteValue = buffer[byteIndex];
+  bool isWhite = (byteValue & (1 << bitIndex)) != 0;
+  return isWhite ? 1 : 0;
+#endif
 }
 
 String getPixelMatrix() {
-    String matrix = "[";
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        if (y > 0) matrix += ",";
-        matrix += "[";
-        for (int x = 0; x < SCREEN_WIDTH; x++) {
-            if (x > 0) matrix += ",";
-            matrix += getPixelAt(x, y);
-        }
-        matrix += "]";
+  String matrix = "[";
+  for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    if (y > 0) matrix += ",";
+    matrix += "[";
+    for (int x = 0; x < SCREEN_WIDTH; x++) {
+      if (x > 0) matrix += ",";
+      matrix += getPixelAt(x, y);
     }
     matrix += "]";
-    return matrix;
+  }
+  matrix += "]";
+  return matrix;
 }
 
-void nextScreen(){
+void nextScreen() {
   currentScreen++;
   if (currentScreen > maxScreens) {
     currentScreen = 0;
-    //change animation
     animation++;
-    if(animation>max_anim)animation=0;
+    if (animation > max_anim) animation = 0;
   }
 }
