@@ -1,3 +1,4 @@
+#include "globals.h"
 
 //loader vars 
 int selectedMode = 0;
@@ -105,7 +106,10 @@ void loadedSetup()
     ctrlgotchi_setup();
   }
   if(selectedMode == 3){ 
-    deauthergotchi_setup();
+    #if defined(ESP8266)
+deauthergotchi_setup();
+#endif
+
   }
   //close the setup
   loaderSetupSuccess=true;
@@ -117,7 +121,10 @@ void loadedLoop()
   if(selectedMode == 0 ) netgotchi_loop();
   if(selectedMode == 1 ) textgotchi_loop();
   if(selectedMode == 2 ) ctrlgotchi_loop();
-  if(selectedMode == 3 ) deauthergotchi_loop();
+  #if defined(ESP8266)
+if (selectedMode == 3) deauthergotchi_loop();
+#endif
+
 }
 
 void SkipLoader()

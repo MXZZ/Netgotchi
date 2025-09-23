@@ -1,3 +1,4 @@
+#include "globals.h"
 //Buttons functions
 
 Button2 buttonLeft;

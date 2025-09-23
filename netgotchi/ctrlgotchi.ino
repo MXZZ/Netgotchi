@@ -1,4 +1,9 @@
-#include <espnow.h>
+#include "globals.h"
+
+#include "globals.h"
+
+#include <WiFi.h>     // richiesto prima di esp_now.h su ESP32
+#include <esp_now.h>
 
 String command[] = {"< ESPNOW RECEIVER >","< ESPNOW SENDER >", "< ON >", "< OFF >" , "< TIMER 1min >", "< TIMER 15min >", "< TIMER 1h >", "< TIMER 8h >"," < ALERT REPEAT 1h>"," < ALERT REPEAT 30m>","< ALERT REPEAT 1m>" };
 String ctrlmessage = "";
@@ -102,7 +107,12 @@ void ctrlgotchi_setup()
   }
 
   esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-  esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+  esp_now_peer_info_t peer = {};
+memcpy(peer.peer_addr, broadcastAddress, 6);
+peer.ifidx   = WIFI_IF_STA;   // o WIFI_IF_AP se stai in AP
+peer.channel = 1;             // metti il tuo canale Wi-Fi se vuoi allinearlo
+peer.encrypt = false;
+esp_now_add_peer(&peer);
   esp_now_register_recv_cb(crtlgotchi_OnDataRecv);
 
   displayClearDisplay();

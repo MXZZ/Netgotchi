@@ -1,4 +1,4 @@
-#include <espnow.h>
+#include "globals.h"
 
 const char keyboard_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
 int selected_keyboard_index = 0;
@@ -47,7 +47,13 @@ void textgotchi_setup()
   }
 
   esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-  esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+esp_now_peer_info_t peer = {};
+memcpy(peer.peer_addr, broadcastAddress, 6);
+peer.ifidx   = WIFI_IF_STA;   // o WIFI_IF_AP se stai in AP
+peer.channel = 1;             // metti il tuo canale Wi-Fi se vuoi allinearlo
+peer.encrypt = false;
+esp_now_add_peer(&peer);
+
   esp_now_register_recv_cb(OnDataRecv);
 
   displayClearDisplay();

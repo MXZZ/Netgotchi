@@ -1,3 +1,4 @@
+#include "globals.h"
 void countdownToRestart()
 {
   //restart in case of connection timeout , retry connection every 5 minutes.
