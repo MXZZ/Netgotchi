@@ -84,6 +84,15 @@ void networkInit()
         lowerPinVoltage();
         server.send(200, "text/plain", "OFF command received");
     });
+    
+    // Pin status endpoint
+    server.on("/pin/status", HTTP_GET, [](){
+        pinMode(EXT_PIN_16, INPUT);
+        int pinState = digitalRead(EXT_PIN_16);
+        pinMode(EXT_PIN_16, OUTPUT); // Set back to output mode
+        String json = "{\"state\":\"" + String(pinState == HIGH ? "HIGH" : "LOW") + "\",\"value\":" + String(pinState) + "}";
+        server.send(200, "application/json", json);
+    });
     server.on("/command/TIMEPLUS", HTTP_GET, [](){
         timeOffset+=3600;
         timeClient.setTimeOffset(timeOffset);
@@ -93,6 +102,25 @@ void networkInit()
         timeOffset-=3600;
         timeClient.setTimeOffset(timeOffset);
         server.send(200, "text/plain", "Hour- command received");
+    });
+
+    // Evil Twin Scan endpoints
+    server.on("/eviltwin/status", HTTP_GET, [](){
+        String json = "{\"enabled\":" + String(evilTwinScanEnabled ? "true" : "false") + "}";
+        server.send(200, "application/json", json);
+    });
+
+    server.on("/eviltwin/enable", HTTP_GET, [](){
+        evilTwinScanEnabled = true;
+        SerialPrintLn("Evil Twin Scan ENABLED via web");
+        server.send(200, "text/plain", "Evil Twin Scan Enabled");
+    });
+
+    server.on("/eviltwin/disable", HTTP_GET, [](){
+        evilTwinScanEnabled = false;
+        evilTwinDetected = false; // Clear detection when disabled
+        SerialPrintLn("Evil Twin Scan DISABLED via web");
+        server.send(200, "text/plain", "Evil Twin Scan Disabled");
     });
 
     server.begin();
@@ -130,7 +158,7 @@ void networkFunctionsLoop()
   }
 
   //  Evil Twin scans
-  if (currentMillis - previouslastEvilTwinCheck >= evilTwinScanInterval) {
+  if ((currentMillis - previouslastEvilTwinCheck >= evilTwinScanInterval) && evilTwinScanEnabled ) {
     previouslastEvilTwinCheck = currentMillis;
     bool previousEvilTwinStatus = evilTwinDetected;
     evilTwinDetected = detectEvilTwin();
@@ -145,9 +173,20 @@ void networkFunctionsLoop()
       pingNetwork(i);
       i++;
     } else {
+      // Scan complete - recalculate totals from data
       i = 0;
       ipnum = 0;
       vulnerabilitiesFound = 0;
+      
+      // Count alive hosts and vulnerable hosts
+      for (int j = 0; j < max_ip; j++) {
+        if (ips[j] == 1 || ips[j] == 2) {
+          ipnum++; // Count all alive hosts (normal + vulnerable)
+        }
+        if (ips[j] == 2) {
+          vulnerabilitiesFound++; // Count only vulnerable hosts
+        }
+      }
     }
   }
 
@@ -167,16 +206,16 @@ void pingNetwork(int i) {
     SerialPrintLn(ip);
 
     iprows++;
-    ipnum++;
-    ips[i] = 1;
+    ips[i] = 1; // Mark as alive
 
     if (securityScanActive) {
       int scanresult = scanForDangerousServices(ip);
       if (scanresult == 1) {
-        ips[i] = 2;
+        ips[i] = 2; // Mark as vulnerable
       }
     }
   } else {
+    // Host is down
     if (ips[i] == -1) ips[i] = 0;
     else if (ips[i] == 1) ips[i] = -1;
     else if (ips[i] == 2) ips[i] = -1;
@@ -212,8 +251,36 @@ bool detectEvilTwin() {
 
 int scanForDangerousServices(IPAddress ip) {
   WiFiClient client;
+  bool foundVulnerability = false;
+  int hostIndex = -1;
+  
+  // Find or create host entry
+  for (int h = 0; h < MAX_VULNERABLE_HOSTS; h++) {
+    if (vulnerableHosts[h].active && vulnerableHosts[h].ip == ip) {
+      hostIndex = h;
+      // Reset port count for fresh scan
+      vulnerableHosts[h].portCount = 0;
+      break;
+    }
+  }
+  
+  // If not found, create new entry
+  if (hostIndex == -1) {
+    for (int h = 0; h < MAX_VULNERABLE_HOSTS; h++) {
+      if (!vulnerableHosts[h].active) {
+        hostIndex = h;
+        vulnerableHosts[h].ip = ip;
+        vulnerableHosts[h].active = true;
+        vulnerableHosts[h].portCount = 0;
+        break;
+      }
+    }
+  }
+  
+  // Scan all ports and track open ones
   for (int i = 0; i < sizeof(dangerousServices) / sizeof(dangerousServices[0]); ++i) {
     if (skipFTPScan && dangerousServices[i].name == "FTP") continue;
+    
     if (client.connect(ip, dangerousServices[i].port)) {
       SerialPrintLn("Open port found: ");
       SerialPrintLn(dangerousServices[i].name);
@@ -222,11 +289,27 @@ int scanForDangerousServices(IPAddress ip) {
       SerialPrintLn(") on ");
       SerialPrintLn(ip);
       client.stop();
-      vulnerabilitiesFound++;
-      return 1;
+      
+      // Store open port info
+      if (hostIndex != -1 && vulnerableHosts[hostIndex].portCount < MAX_OPEN_PORTS) {
+        vulnerableHosts[hostIndex].openPorts[vulnerableHosts[hostIndex].portCount] = 
+          String(dangerousServices[i].name) + ":" + String(dangerousServices[i].port);
+        vulnerableHosts[hostIndex].portCount++;
+      }
+      
+      foundVulnerability = true; // Mark that this host has at least one vulnerability
     }
   }
-  return 0;
+  
+  // Update vulnerable host count
+  vulnerableHostCount = 0;
+  for (int h = 0; h < MAX_VULNERABLE_HOSTS; h++) {
+    if (vulnerableHosts[h].active && vulnerableHosts[h].portCount > 0) {
+      vulnerableHostCount++;
+    }
+  }
+  
+  return foundVulnerability ? 1 : 0;
 }
 
 

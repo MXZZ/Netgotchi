@@ -24,7 +24,7 @@
 #include <WiFiManager.h>  // Include the WiFiManager library
 #include <Button2.h>
 
-const float VERSION = 1.63;
+const float VERSION = 1.65;
 
 //Oled Screen Selectors
 #define SCREEN_WIDTH 128
@@ -35,9 +35,6 @@ const float VERSION = 1.63;
 #define oled_type_ssd1306 1
 #define oled_type_sh1106 0
 #define oled_type_ssd1305 0
-
-//For the cheap aliexpress boards with embedded OLED
-#define NodeMCU_Oled 1 //set oled type to ssd1306
 
 #define BTN_RIGHT 13
 #define BTN_LEFT 12 
@@ -86,12 +83,12 @@ unsigned long previouslastEvilTwinCheck = 0;
 
 const long interval = 20000;
 //delay interval for each screen
-int screensInterval[] = { 30000, 10000, 10000, 5000, 10000, 5000 };
+int screensInterval[] = { 30000, 10000, 10000, 5000, 10000, 5000, 8000 };
 int i = 0;
 int ipnum = 0;   // display counter
 int iprows = 0;  // ip rows
 int currentScreen = 0;
-int maxScreens = 5;
+int maxScreens = 6;
 
 int max_ip = 255;
 bool startScan = false;
@@ -166,6 +163,8 @@ bool securityScanActive = true;
 bool skipFTPScan = true;
 int vulnerabilitiesFound = 0;
 int selectedSetting = 0;
+bool screenWireParams = false; //false for netgotchi pro and v1 
+bool evilTwinScanEnabled = true;
 
 int settingLength = 6;
 String settings[] = { "Start AP", "Online Mode", "Airplane Mode", "Start WebInterface", "Restart", "Reset Settings" };
@@ -175,8 +174,19 @@ struct Service {
   uint16_t port;
 };
 
+// Structure to track vulnerable hosts and their open ports
+#define MAX_VULNERABLE_HOSTS 20
+#define MAX_OPEN_PORTS 8
 
+struct VulnerableHost {
+  IPAddress ip;
+  String openPorts[MAX_OPEN_PORTS];  // Store "ServiceName:Port"
+  int portCount;
+  bool active;
+};
 
+VulnerableHost vulnerableHosts[MAX_VULNERABLE_HOSTS];
+int vulnerableHostCount = 0;
 
 Service dangerousServices[] = {
  { "Telnet", 23 },
@@ -365,7 +375,6 @@ void SerialPrintLn(int message) {
 
 void setup() {
   Serial.begin(115200);
-  if (NodeMCU_Oled) Wire.begin(14, 12);
   displayInit();
   loaderSetup();
 }
@@ -387,6 +396,13 @@ void netgotchi_setup()
 {
   
   displayInit();
+  
+  // Initialize vulnerable hosts array
+  for (int i = 0; i < MAX_VULNERABLE_HOSTS; i++) {
+    vulnerableHosts[i].active = false;
+    vulnerableHosts[i].portCount = 0;
+  }
+  
   if(hasControlsButtons)checkOfflineMode();
   netgotchiIntro();
 
@@ -423,6 +439,7 @@ void netgotchi_loop()
     if (currentScreen == 2) displayIPS();
     if (currentScreen == 3) displayNetgotchiStats();
     if (currentScreen == 4) displayRippleSpace();
+    if (currentScreen == 5) displayVulnerabilities();
   }
 
   //button loops

